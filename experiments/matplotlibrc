@@ -1,0 +1,12 @@
+backend: GtkAgg
+font.family: serif
+font.serif: Palatino
+font.size: 9.0
+legend.fontsize: 9.0
+legend.frameon: False
+text.usetex: True
+text.latex.unicode: True
+axes.linewidth: 0.25
+axes.color_cycle: 800000, 47294F, 193A6B, A08300, 3C7705, AA4C00
+axes.titlesize: 9.0
+
