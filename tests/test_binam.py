@@ -72,6 +72,13 @@ class TestBinaryMatrix(unittest.TestCase):
         self.assertEqual(a[1, 0], 0)
         self.assertEqual(a[1, 1], 0)
 
+    def test_shape(self):
+        a = pynam.binam.BinaryMatrix()
+        a.resize(10, 5)
+
+        self.assertEqual(a.shape, (10, 5))
+        self.assertEqual(len(a), 10)
+
     def test_row_col(self):
         a = pynam.binam.BinaryMatrix()
         a.resize(10, 5)

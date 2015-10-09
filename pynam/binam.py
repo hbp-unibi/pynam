@@ -145,6 +145,19 @@ class BinaryMatrix:
             cell = cell | self.int_type(1 << (j % self.int_width))
         self.arr[i, j / self.int_width] = cell
 
+    def __len__(self):
+        """
+        Returns the number of rows in the matrix.
+        """
+        return self.n_rows
+
+    @property
+    def shape(self):
+        """
+        Returns the shape of the binary matrix.
+        """
+        return (self.n_rows, self.n_cols)
+
     def row(self, i, return_list=False):
         """
         Returns the i-th row stored in the matrix as a numpy uint8 vector.
