@@ -18,10 +18,12 @@
 
 # Import public classes/functions
 from binam import BinaryMatrix, BiNAM
-from binam_data import generate, generate_naive
+from binam_data import generate, generate_naive, generate_random
+from binam_network import Network, TopologyParameters
 
 # Current version of "PyNAM"
 __version__ = "1.0.0"
 
 # Export all explicitly imported classes/functions
-__all__ = ['BinaryMatrix', 'BiNAM', 'generate', 'generate_naive']
+__all__ = ['BinaryMatrix', 'BiNAM', 'Network', 'TopologyParameters',
+        'generate', 'generate_naive', 'generate_random']
