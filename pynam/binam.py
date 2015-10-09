@@ -111,12 +111,17 @@ class BinaryMatrix:
     def __getitem__(self, tup):
         """
         Allows to access a single bit in the matrix, returns the value in the
-        i-th row and the j-th colum.
+        i-th row and the j-th colum. If a single value is given, returns the
+        corresponding row.
 
         :param tup: tuple with the entries i and j, where i is the index of the
         row for which the bit should be written and j is the index of the column
-        for which the bit should be written.
+        for which the bit should be written. If a single value i is given, only
+        the row is returned.
         """
+        if isinstance(tup, int):
+            return self.row(tup)
+
         i, j = tup
         assert(i >= 0 and i < self.n_rows and j >= 0 and j < self.n_cols)
         return np.uint8(self.arr[i, j / self.int_width]

@@ -82,6 +82,13 @@ class TestBinaryMatrix(unittest.TestCase):
         a[9, 0] = 1
         a[0, 0] = 1
 
+        np.testing.assert_equal(a[0], [1, 0, 0, 0, 0])
+        np.testing.assert_equal(a[2], [0, 0, 0, 0, 1])
+        np.testing.assert_equal(a[3], [0, 1, 0, 0, 0])
+        np.testing.assert_equal(a[5], [0, 0, 1, 0, 0])
+        np.testing.assert_equal(a[9], [1, 0, 0, 0, 0])
+        np.testing.assert_equal(a[4], [0, 0, 0, 0, 0])
+
         np.testing.assert_equal(a.row(0), [1, 0, 0, 0, 0])
         np.testing.assert_equal(a.row(2), [0, 0, 0, 0, 1])
         np.testing.assert_equal(a.row(3), [0, 1, 0, 0, 0])
