@@ -16,6 +16,12 @@
 #   You should have received a copy of the GNU General Public License
 #   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# Automatically include lib/pynnless if present
+import os
+import sys
+sys.path.append(os.path.realpath(os.path.join(os.path.dirname(__file__),
+        "../lib/pynnless")))
+
 # Import public classes/functions
 from binam import BinaryMatrix, BiNAM
 from binam_data import generate, generate_naive, generate_random
