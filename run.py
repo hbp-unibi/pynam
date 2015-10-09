@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 #   PyNAM -- Python Neural Associative Memory Simulator and Evaluator
 #   Copyright (C) 2015 Andreas Stöckel
@@ -37,4 +38,6 @@
 #
 #     Examples:
 #         cat config.json | ./run.py --simulation > result.json
+
+import pynam
 
