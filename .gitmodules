@@ -1,0 +1,3 @@
+[submodule "lib/pynnless"]
+	path = lib/pynnless
+	url = https://github.com/hbp-sanncs/pynnless
