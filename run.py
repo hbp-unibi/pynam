@@ -40,4 +40,27 @@
 #         cat config.json | ./run.py --simulation > result.json
 
 import pynam
+import pynnless as pynl
 
+# Generate test data
+print "Generate test data..."
+mat_in = pynam.generate(n_bits=32, n_ones=3, n_samples=1)
+mat_out = pynam.generate(n_bits=32, n_ones=3, n_samples=1)
+
+# Build the network and the metadata
+print "Build network..."
+builder = pynam.NetworkBuilder(mat_in, mat_out)
+net = builder.build(topology_params={"weight": 1})
+
+# Run the simulation
+print "Initialize simulator..."
+sim = pynl.PyNNLess("nest")
+print "Run simulation..."
+output = sim.run(net)
+
+# Fetch the output times and output indices from the output data
+print "Analyze result..."
+print net["input_times"], net["input_indices"]
+output_times, output_indices = net.match(output)
+
+print output_times, output_indices
