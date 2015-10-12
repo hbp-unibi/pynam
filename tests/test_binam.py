@@ -156,3 +156,44 @@ class TestBiNAM(unittest.TestCase):
         np.testing.assert_equal(a.evaluate([1, 1, 1, 0, 0, 0, 0, 0, 0, 0]),
             [1, 0, 1, 1, 0, 0, 0]);
 
+    def test_train_matrix(self):
+        mat_in = np.array([
+            [0, 0, 1, 0, 0, 1],
+            [1, 0, 0, 1, 0, 0],
+            [0, 0, 0, 1, 1, 0],
+        ])
+        mat_out = np.array([
+            [1, 0, 1, 0],
+            [1, 0, 0, 1],
+            [0, 1, 0, 1],
+        ])
+
+        binam = pynam.binam.BiNAM(6, 4)
+        binam.train_matrix(mat_in, mat_out)
+        np.testing.assert_equal([
+            [1, 0, 0, 1],
+            [0, 0, 0, 0],
+            [1, 0, 1, 0],
+            [1, 1, 0, 1],
+            [0, 1, 0, 1],
+            [1, 0, 1, 0]
+        ], binam.get())
+
+    def test_evaluate_matrix(self):
+        mat_in = np.array([
+            [0, 0, 1, 0, 0, 1],
+            [1, 0, 0, 1, 0, 0],
+            [0, 0, 0, 1, 1, 0],
+        ])
+        mat_out = np.array([
+            [1, 0, 1, 0],
+            [1, 0, 0, 1],
+            [0, 1, 0, 1],
+        ])
+
+        binam = pynam.binam.BiNAM(6, 4)
+        binam.train_matrix(mat_in, mat_out)
+        mat_out_recall = binam.evaluate_matrix(mat_in)
+
+        np.testing.assert_equal(mat_out_recall, mat_out)
+

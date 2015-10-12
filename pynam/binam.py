@@ -319,6 +319,21 @@ class BiNAM(BinaryMatrix):
             if (vec_in[i] != 0):
                 self.arr[i] = np.bitwise_or(self.arr[i], vec_out)
 
+    def train_matrix(self, mat_in, mat_out):
+        """
+        Trains the BiNAM matrix for the given input and output matrices.
+
+        :param mat_in: input matrix, samples in rows.
+        :param mat_out: output matrix, samples in rows.
+        """
+        N, m = mat_in.shape
+        N2, n = mat_out.shape
+        assert(N == N2)
+        assert(m == self.n_rows)
+        assert(n == self.n_cols)
+        for k in xrange(N):
+            self.train(mat_in[k], mat_out[k])
+
     def evaluate(self, vec_in, threshold = -1):
         """
         Returns the output of the BiNAM for the given input vector.
@@ -345,3 +360,20 @@ class BiNAM(BinaryMatrix):
         # Clamp according to the given threshold
         return np.asarray(res >= threshold, dtype=np.uint8)
 
+    def evaluate_matrix(self, mat_in, threshold = -1):
+        """
+        Evaluates an entire matrix of input vectors, returns a corresponding
+        output matrix.
+
+        :param mat_in: input matrix that should be evaluated, rows contain
+        samples.
+        :param threshold: threshold value -- values after the matrix-vector
+        multiplication larger or equal to the threshold are set to one.
+        """
+        # Fetch the shape of the input matrix, create the output matrix
+        N, m = mat_in.shape
+        mat_out = np.zeros((N, self.n_cols), dtype=np.uint8)
+        assert(m == self.n_rows)
+        for k in xrange(N):
+            mat_out[k] = self.evaluate(mat_in[k], threshold)
+        return mat_out
