@@ -21,7 +21,7 @@ import unittest
 import numpy as np
 import numpy.testing
 from pynam.binam_utils import ncr, entropy_hetero, entropy_hetero_uniform,\
-        expected_false_positives
+        expected_false_positives, calculate_errs
 
 class TestUtils(unittest.TestCase):
 
@@ -91,3 +91,18 @@ class TestUtils(unittest.TestCase):
         v3 = entropy_hetero(errs2, n_out_bits, n_out_ones)
         self.assertAlmostEqual(v1, v2)
         self.assertAlmostEqual(v1, v3)
+
+    def test_calculate_errs(self):
+        mat_out_expected = np.array([
+            [1, 0, 1, 0],
+            [1, 0, 0, 1],
+            [0, 1, 0, 1],
+        ])
+        mat_out = np.array([
+            [1, 0.25, 0.2, 0],
+            [1.5, 1.2, 0.25, 1],
+            [0.1, 1, 0, 1],
+        ])
+        errs = calculate_errs(mat_out, mat_out_expected)
+        self.assertAlmostEqual([{'fp': 0.25, 'fn': 0.8},
+                {'fp': 1.25, 'fn': 0}, {'fp': 0.1, 'fn': 0}], errs)

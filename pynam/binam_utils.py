@@ -132,6 +132,21 @@ def entropy_hetero(errs, n_out_bits, n_out_ones):
                 e = e + math.log(float(n - i) / float(d + errs[t] - i), 2.0)
     return e
 
+def calculate_errs(mat_out, mat_out_expected):
+    """
+    For each sample calculates the number of false negatives and false
+    positives.
+    """
+    N, n = mat_out.shape
+    res = [{'fn': 0, 'fp': 0} for _ in xrange(N)]
+    for k in xrange(N):
+        for j in xrange(n):
+            if mat_out_expected[k, j] == 0:
+                res[k]["fp"] = res[k]["fp"] + min(1, mat_out[k, j])
+            else:
+                res[k]["fn"] = res[k]["fn"] + 1 - min(1, mat_out[k, j])
+    return res
+
 def conventional_memory_entropy(n_in_bits, n_out_bits, n_out_ones):
     """
     Calculates storage capacity of a conventional MxN ROM holding data with the
