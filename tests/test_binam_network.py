@@ -206,7 +206,7 @@ class TestNetworkBuilder(unittest.TestCase):
         mat_out[2, 1] = 1
 
         builder = NetworkBuilder(mat_in, mat_out)
-        net = builder.build()
+        net = builder.build(topology_params={"params": {"cm": 0.2}})
         topo = {
             "connections": net["connections"],
             "populations": net["populations"]
@@ -215,7 +215,7 @@ class TestNetworkBuilder(unittest.TestCase):
         indices = net["input_indices"]
         output_neuron = {'count': 1, 'params':
                 {'tau_refrac': 0.1, 'tau_m': 20.0, 'e_rev_E': 0.0,
-                'i_offset': 0.0, 'cm': 1.0, 'e_rev_I': -70.0,
+                'i_offset': 0.0, 'cm': 0.2, 'e_rev_I': -70.0,
                 'v_thresh': -50.0, 'tau_syn_E': 5.0, 'v_rest': -65.0,
                 'tau_syn_I': 5.0, 'v_reset': -65.0}, 'type':
                 'IF_cond_exp', 'record': ['spikes']}
