@@ -26,7 +26,10 @@ from pynam.binam_network import (
         InputParameters,
         TopologyParameters,
         NetworkBuilder,
-        NetworkInstance)
+        NetworkInstance,
+        NetworkPool,
+        NetworkAnalysis)
+
 
 class TestInputParameters(unittest.TestCase):
 
@@ -43,25 +46,29 @@ class TestInputParameters(unittest.TestCase):
         res = params.build_spike_train()
         numpy.testing.assert_equal([0.0, 4.0, 8.0], res)
 
+def test_data():
+    mat_in = BinaryMatrix(3, 5)
+    mat_in[0, 4] = 1
+    mat_in[0, 2] = 1
+    mat_in[1, 0] = 1
+    mat_in[1, 1] = 1
+    mat_in[2, 3] = 1
+    mat_in[2, 2] = 1
+
+    mat_out = BinaryMatrix(3, 5)
+    mat_out[0, 2] = 1
+    mat_out[0, 3] = 1
+    mat_out[1, 1] = 1
+    mat_out[1, 4] = 1
+    mat_out[2, 0] = 1
+    mat_out[2, 1] = 1
+
+    return mat_in, mat_out
+
 class TestNetworkBuilder(unittest.TestCase):
 
     def test_build_topology(self):
-        mat_in = BinaryMatrix(3, 5)
-        mat_in[0, 4] = 1
-        mat_in[0, 2] = 1
-        mat_in[1, 0] = 1
-        mat_in[1, 1] = 1
-        mat_in[2, 3] = 1
-        mat_in[2, 2] = 1
-
-        mat_out = BinaryMatrix(3, 5)
-        mat_out[0, 2] = 1
-        mat_out[0, 3] = 1
-        mat_out[1, 1] = 1
-        mat_out[1, 4] = 1
-        mat_out[2, 0] = 1
-        mat_out[2, 1] = 1
-
+        mat_in, mat_out = test_data()
         net = NetworkBuilder(mat_in, mat_out)
         topo = net.build_topology(topology_params={"params": {"cm": 0.2}})
         self.assertEqual(set(topo["connections"]), set([
@@ -155,28 +162,23 @@ class TestNetworkBuilder(unittest.TestCase):
             ((9, 0), (17, 0), 0.1, 0.0)]))
 
     def test_build_input(self):
-        mat_in = BinaryMatrix(3, 5)
-        mat_in[0, 4] = 1
-        mat_in[0, 2] = 1
-        mat_in[1, 0] = 1
-        mat_in[1, 1] = 1
-        mat_in[2, 3] = 1
-        mat_in[2, 2] = 1
-
-        mat_out = BinaryMatrix(3, 5)
-
+        mat_in, mat_out = test_data()
         net = NetworkBuilder(mat_in, mat_out)
-        times, indices = net.build_input()
+        times, indices, split = net.build_input()
         self.assertEqual([[100.0], [100.0], [0.0, 200.0], [200.0], [0.0]], times)
         self.assertEqual([[1], [1], [0, 2], [2], [0]], indices)
+        self.assertEqual([3], split)
 
-        times, indices = net.build_input(topology_params={"multiplicity": 2})
+        times, indices, split = net.build_input(
+                topology_params={"multiplicity": 2})
         self.assertEqual([[100.0], [100.0], [100.0], [100.0], [0.0, 200.0],
                 [0.0, 200.0], [200.0], [200.0], [0.0], [0.0]], times)
         self.assertEqual([[1], [1], [1], [1], [0, 2], [0, 2],
                 [2], [2], [0], [0]], indices)
+        self.assertEqual([3], split)
 
-        times, indices = net.build_input(topology_params={"multiplicity": 2},
+        times, indices, split = net.build_input(
+                topology_params={"multiplicity": 2},
                 input_params={"burst_size": 3})
         self.assertEqual([[100.0, 101.0, 102.0], [100.0, 101.0, 102.0],
                 [100.0, 101.0, 102.0], [100.0, 101.0, 102.0],
@@ -187,24 +189,42 @@ class TestNetworkBuilder(unittest.TestCase):
         self.assertEqual([[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1],
                 [0, 0, 0, 2, 2, 2], [0, 0, 0, 2, 2, 2], [2, 2, 2], [2, 2, 2],
                 [0, 0, 0], [0, 0, 0]], indices)
+        self.assertEqual([3], split)
 
-    def test_build(self):
-        mat_in = BinaryMatrix(3, 5)
-        mat_in[0, 4] = 1
-        mat_in[0, 2] = 1
+    def test_build_multi_input(self):
+        mat_in = BinaryMatrix(2, 4)
+        mat_in[0, 3] = 1
+        mat_in[0, 1] = 1
         mat_in[1, 0] = 1
         mat_in[1, 1] = 1
-        mat_in[2, 3] = 1
-        mat_in[2, 2] = 1
 
-        mat_out = BinaryMatrix(3, 5)
-        mat_out[0, 2] = 1
-        mat_out[0, 3] = 1
-        mat_out[1, 1] = 1
-        mat_out[1, 4] = 1
-        mat_out[2, 0] = 1
-        mat_out[2, 1] = 1
+        mat_out = BinaryMatrix(2, 6)
 
+        net = NetworkBuilder(mat_in, mat_out)
+        times, indices, split = net.build_input(
+                topology_params={"multiplicity": 2},
+                input_params=[{"burst_size": 3}, {"burst_size": 2, "isi": 4.0}])
+
+        self.assertEqual([
+            [100.0, 101.0, 102.0, 1300.0, 1304.0],
+            [100.0, 101.0, 102.0, 1300.0, 1304.0],
+            [0.0, 1.0, 2.0, 100.0, 101.0, 102.0, 1200.0, 1204.0, 1300.0, 1304.0],
+            [0.0, 1.0, 2.0, 100.0, 101.0, 102.0, 1200.0, 1204.0, 1300.0, 1304.0],
+            [], [],
+            [0.0, 1.0, 2.0, 1200.0, 1204.0],
+            [0.0, 1.0, 2.0, 1200.0, 1204.0]], times)
+        self.assertEqual([
+            [1, 1, 1, 3, 3],
+            [1, 1, 1, 3, 3],
+            [0, 0, 0, 1, 1, 1, 2, 2, 3, 3],
+            [0, 0, 0, 1, 1, 1, 2, 2, 3, 3],
+            [], [],
+            [0, 0, 0, 2, 2],
+            [0, 0, 0, 2, 2]], indices)
+        self.assertEqual([2, 4], split)
+
+    def test_build(self):
+        mat_in, mat_out = test_data()
         builder = NetworkBuilder(mat_in, mat_out)
         net = builder.build(topology_params={"params": {"cm": 0.2}})
         topo = {
@@ -247,4 +267,151 @@ class TestNetworkBuilder(unittest.TestCase):
         self.assertEqual([[100.0], [100.0], [0.0, 200.0], [200.0], [0.0]],
                 times)
         self.assertEqual([[1], [1], [0, 2], [2], [0]], indices)
+
+time_mux_output_data = [
+            {}, {}, {}, {}, {},
+            {"spikes": [[0.0, 100.0, 1301.0, 1400.0]]},
+            {"spikes": [[101.0, 1401.0]]},
+            {"spikes": [[300.0, 301.0, 1600.0, 1601.0]]},
+            {"spikes": [[200.0, 1500.0]]},
+            {"spikes": [[201.0, 101.0, 1501.0, 1401.0]]}
+        ]
+
+def test_time_mux_res(self, analysis_instances):
+    self.assertEqual(2, len(analysis_instances))
+
+    self.assertEqual(
+        analysis_instances[0]["input_times"],
+        [[100.0], [100.0], [0.0, 200.0], [200.0], [0.0]])
+    self.assertEqual(
+        analysis_instances[0]["input_indices"],
+        [[1], [1], [0, 2], [2], [0]])
+    self.assertEqual(
+        analysis_instances[0]["output_times"],
+        [[0.0, 100.0], [101.0], [300.0, 301.0], [200.0], [201.0, 101.0]])
+    self.assertEqual(
+        analysis_instances[0]["output_indices"],
+        [[0, 0], [1], [2, 2], [1], [2, 1]])
+
+    self.assertEqual(
+        analysis_instances[1]["input_times"],
+        [[1400.0], [1400.0], [1300.0, 1500.0], [1500.0], [1300.0]])
+    self.assertEqual(
+        analysis_instances[1]["input_indices"],
+        [[1], [1], [0, 2], [2], [0]])
+    self.assertEqual(
+        analysis_instances[1]["output_times"],
+        [[1301.0, 1400.0], [1401.0], [1600.0, 1601.0], [1500.0],
+         [1501.0, 1401.0]])
+    self.assertEqual(
+        analysis_instances[1]["output_indices"],
+        [[0, 0], [1], [2, 2], [1], [2, 1]])
+
+class TestNetworkInstance(unittest.TestCase):
+
+    def test_match(self):
+        mat_in, mat_out = test_data()
+        builder = NetworkBuilder(mat_in, mat_out)
+        net = builder.build()
+        output = [
+            {}, {}, {}, {}, {},
+            {"spikes": [[0.0, 100.0]]},
+            {"spikes": [[101.0]]},
+            {"spikes": [[300.0, 301.0]]},
+            {"spikes": [[200.0]]},
+            {"spikes": [[201.0, 101.0]]}
+        ]
+        output_spikes, output_indices = net.match(output)
+        self.assertEqual([[0.0, 100.0], [101.0], [300.0, 301.0], [200.0],
+            [201.0, 101.0]], output_spikes)
+        self.assertEqual([[0, 0], [1], [2, 2], [1], [2, 1]], output_indices)
+
+    def test_split(self):
+        times = [[1.0, 2.0, 3.0, 4.0, 5.0], [3.0, 4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]
+        indices = [[1, 2, 3, 4, 5], [3, 4, 5, 6], [7, 8, 9]]
+
+        t1, i1 = NetworkInstance.split(times, indices, 2, 5)
+        self.assertEqual([[2.0, 3.0, 4.0], [3.0, 4.0], []], t1)
+        self.assertEqual([[0, 1, 2], [1, 2], []], i1)
+
+    def test_build_analysis(self):
+        mat_in, mat_out = test_data()
+        builder = NetworkBuilder(mat_in, mat_out)
+        net = builder.build(input_params=[{"multiplicity": 1},
+            {"multiplicity": 2}])
+        analysis_instances = net.build_analysis(time_mux_output_data)
+        test_time_mux_res(self, analysis_instances)
+
+
+class TestNetworkPool(unittest.TestCase):
+
+    def test_init_net_build_analysis(self):
+        mat_in, mat_out = test_data()
+        builder = NetworkBuilder(mat_in, mat_out)
+        pool = NetworkPool(builder.build(input_params=[{}, {}]))
+        analysis_instances = pool.build_analysis(time_mux_output_data)
+        test_time_mux_res(self, analysis_instances)
+
+    def test_add_net_build_analysis(self):
+        mat_in, mat_out = test_data()
+        builder = NetworkBuilder(mat_in, mat_out)
+        net = builder.build(input_params=[{}, {}])
+        pool = NetworkPool()
+        pool.add_network(net)
+        analysis_instances = pool.build_analysis(time_mux_output_data)
+        test_time_mux_res(self, analysis_instances)
+
+    def test_add_nets_build_analysis(self):
+        mat_in, mat_out = test_data()
+        builder = NetworkBuilder(mat_in, mat_out)
+        net = builder.build(input_params=[{"multiplicity": 1},
+            {"multiplicity": 2}])
+        pool = NetworkPool()
+        pool.add_networks([net, net, net])
+        analysis_instances = pool.build_analysis(time_mux_output_data * 3)
+        self.assertEqual(6, len(analysis_instances))
+        test_time_mux_res(self, analysis_instances[0:2])
+        test_time_mux_res(self, analysis_instances[2:4])
+        test_time_mux_res(self, analysis_instances[4:6])
+
+
+class TestNetworkAnalysis(unittest.TestCase):
+
+    def test_calculate_latency(self):
+        analysis = NetworkAnalysis({
+            "input_times": [[1.0, 2.0], [3.0], [4.0, 5.0, 6.0]],
+            "input_indices": [[0, 1], [2], [3, 4, 5]],
+            "output_times": [[1.75, 2.5], [4.5, 4.75], [5.1, 5.2, 6.3], [6.4]],
+            "output_indices": [[0, 1], [3, 3], [4, 4, 5], [5]]
+        })
+        latency = analysis.calculate_latencies()
+        latency[latency == np.inf] = -1 # almost_equal and inf is buggy
+        np.testing.assert_almost_equal([0.75, 0.5, -1, 0.75, 0.2, 0.4], latency)
+
+    def test_calculate_output_matrix(self):
+        analysis = NetworkAnalysis({
+            "input_times": [[0, 0], [0], [0, 0, 0]],
+            "input_indices": [[0, 1], [2], [3, 4, 5]],
+            "output_times": [[0, 0, 0], [0, 0, 0], [0, 0], [0, 0, 0]],
+            "output_indices": [[0, 1, 1, 2], [0, 3, 2], [4, 4], [0, 1, 5]]
+        })
+
+        mat_out = analysis.calculate_output_matrix(output_burst_size=2)
+        np.testing.assert_almost_equal([
+            [ 0.5,  0.5,  0.,   0.5],
+            [ 1.,   0.,   0.,   0.5],
+            [ 0.,   0.5,  0.,   0. ],
+            [ 0.,   0.5,  0.,   0. ],
+            [ 0.,   0.,   1.,   0. ],
+            [ 0.,   0.,   0.,   0.5],], mat_out)
+
+        mat_out = analysis.calculate_output_matrix(topology_params={"multiplicity": 2},
+                output_burst_size=2)
+        np.testing.assert_almost_equal([
+            [ 1.,  0.5],
+            [ 1.,  0.5],
+            [ 0.5, 0.],
+            [ 0.5, 0.],
+            [ 0.,  1.],
+            [ 0.,  0.5],], mat_out)
 

@@ -26,12 +26,12 @@ sys.path.append(os.path.realpath(os.path.join(os.path.dirname(__file__),
 from binam import BinaryMatrix, BiNAM
 from binam_data import generate, generate_naive, generate_random
 from binam_network import (InputParameters, TopologyParameters, NetworkBuilder,
-        NetworkInstance)
+        NetworkInstance, NetworkPool, NetworkAnalysis)
 
 # Current version of "PyNAM"
 __version__ = "1.0.0"
 
 # Export all explicitly imported classes/functions
 __all__ = ['BinaryMatrix', 'BiNAM', 'NetworkBuilder', 'NetworkInstance',
-        'TopologyParameters', 'InputParameters',
+        'NetworkPool', 'NetworkAnalysis', 'TopologyParameters', 'InputParameters',
         'generate', 'generate_naive', 'generate_random']

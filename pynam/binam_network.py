@@ -22,6 +22,7 @@ a spiking neural network.
 """
 
 import binam
+import binam_utils
 import bisect
 import itertools
 import numpy as np
@@ -187,13 +188,14 @@ class NetworkBuilder:
                         for k in xrange(s) for l in xrange(s)])
         return net
 
-    def build_input(self, k=-1, time_offs=0, index_offs = 0, topology_params={},
-            input_params={}):
+    def build_input(self, k=-1, time_offs=0, topology_params={},
+            input_params={}, input_params_delay=10):
         """
         Builds the input spike trains for the network with the given input
-        parameters. Returns a list with spike times for each neuron as first
+        parameter sets. Returns a list with spike times for each neuron as first
         return value and a similar list containing the sample index for each
-        spike time.
+        spike time. Note that input_params may be an array of parameter sets --
+        in this case multiple input spike trains are created.
         """
 
         # If k is smaller than zero, use the number of samples instead
@@ -206,34 +208,51 @@ class NetworkBuilder:
         else:
             X = np.array(self.mat_in, dtype=np.uint8)
 
-        # Turn the given parameters into an InputParameters instance
-        t = TopologyParameters(topology_params)
-        s = t["multiplicity"]
+        # Fetch the multiplicity s from the topology parameters
+        s = TopologyParameters(topology_params)["multiplicity"]
 
-        p = InputParameters(input_params)
-        b = p["burst_size"]
+        # Calculate the total maximum number of input spikes ovar all input
+        # parameter sets
+        max_num_spikes = 0
+        if not isinstance(input_params, list):
+            input_params = [input_params]
+        for ip in input_params:
+            p = InputParameters(ip)
+            b = p["burst_size"]
+            max_num_spikes = max_num_spikes + np.max(np.sum(X, 0)) * b
 
-        # Calculate the maximum number of spikes, create two two-dimensional
-        # matrix which contain the spike times and the sample indics
-        max_num_spikes = np.max(np.sum(X, 0)) * b
-        min_t = np.inf
+        # Create continuous two-dimensional target matrices
         T = np.zeros((s * self.m, max_num_spikes))
         K = np.zeros((s * self.m, max_num_spikes), dtype=np.int32)
         N = np.zeros(self.m, dtype=np.uint32)
-        for l in xrange(k):
-            for i in xrange(self.m):
-                if X[l, i] != 0:
-                    for j in xrange(s):
-                        train = p.build_spike_train(l * p["time_window"])
-                        min_t = np.min([min_t, np.min(train)])
-                        T[i * s + j, (N[i]):(N[i] + b)] = train
-                        K[i * s + j, (N[i]):(N[i] + b)] = l + index_offs
-                    N[i] = N[i] + b
 
-        # Offset the first spike time to "time_window"
+        # Handle all input parameter sets
+        t = 0
+        sIdx = 0
+        min_t = np.inf
+        for ip in input_params:
+            p = InputParameters(ip)
+            b = p["burst_size"]
+
+            # Calculate the maximum number of spikes, create two two-dimensional
+            # matrix which contain the spike times and the sample indics
+            for l in xrange(k):
+                for i in xrange(self.m):
+                    if X[l, i] != 0:
+                        for j in xrange(s):
+                            train = p.build_spike_train(t)
+                            min_t = np.min([min_t, np.min(train)])
+                            T[i * s + j, (N[i]):(N[i] + b)] = train
+                            K[i * s + j, (N[i]):(N[i] + b)] = sIdx
+                        N[i] = N[i] + b
+                sIdx = sIdx + 1
+                t = t + p["time_window"]
+            t = t + p["time_window"] * input_params_delay
+
+        # Offset the first spike time to time_offs
         T = T - min_t + time_offs
 
-        # Extract the lists of lists from the matrices
+        # Extract a list of times and indices for each neuron
         input_times = [[] for _ in xrange(s * self.m)]
         input_indices = [[] for _ in xrange(s * self.m)]
         for i in xrange(self.m):
@@ -243,7 +262,10 @@ class NetworkBuilder:
                 input_times[x] = T[x, I].tolist()
                 input_indices[x] = K[x, I].tolist()
 
-        return input_times, input_indices
+        # Sample indices at which new input parameter sets start
+        input_split = range(k, k * (len(input_params) + 1), k)
+
+        return input_times, input_indices, input_split
 
     def inject_input(self, topology, times):
         """
@@ -259,44 +281,80 @@ class NetworkBuilder:
         to be handed of to PyNNLess.
         """
         topology = self.build_topology(k, topology_params=topology_params)
-        input_times, input_indices = self.build_input(k, time_offs=time_offs,
-                topology_params=topology_params, input_params=input_params)
+        input_times, input_indices, input_split = self.build_input(k,
+                time_offs=time_offs,
+                topology_params=topology_params,
+                input_params=input_params)
         return NetworkInstance(
                 self.inject_input(topology, input_times),
                 input_times=input_times,
-                input_indices=input_indices)
+                input_indices=input_indices,
+                input_split=input_split)
 
 class NetworkInstance(dict):
+    """
+    Concrete instance of a BiNAM network that can be passed to the PyNNLess run
+    method. A NetworkInstance can contain a time multiplex of simulations
+    (with different input parameters). It provides a build_analysis method which
+    splits the time multiplexed results into individual NetworkAnalysis objects.
+    """
 
     def __init__(self, data={}, populations=[], connections=[],
-            input_times=[], input_indices=[]):
+            input_times=[], input_indices=[], input_split=[]):
         utils.init_key(self, data, "populations", populations)
         utils.init_key(self, data, "connections", connections)
         utils.init_key(self, data, "input_times", input_times)
         utils.init_key(self, data, "input_indices", input_indices)
+        utils.init_key(self, data, "input_split", input_split)
 
-    def match(self, output):
+    @staticmethod
+    def flaten(times, indices, sort_by_sample=False):
         """
-        Extracts the output spike times and matches them with the sample indices
+        Flatens a list of spike times and corresponding indices to three
+        one-dimensional arrays containing the spike time, sample indices and
+        neuron indices.
+        """
+
+        # Calculate the total count of spikes
+        count = reduce(lambda x, y: x + y, map(len, times))
+
+        # Initialize the flat arrays containing the times, indices and neuron
+        # indices
+        tF = np.zeros(count)
+        kF = np.zeros(count, dtype=np.int32)
+        nF = np.zeros(count, dtype=np.int32)
+
+        # Iterate over all neurons and all spike times
+        c = 0
+        for i in xrange(len(times)):
+            for j in xrange(len(times[i])):
+                tF[c] = times[i][j]
+                kF[c] = indices[i][j]
+                nF[c] = i
+                c = c + 1
+
+        # Sort the arrays by spike time
+        if sort_by_sample:
+            I = np.argsort(kF)
+        else:
+            I = np.argsort(tF)
+        tF = tF[I]
+        kF = kF[I]
+        nF = nF[I]
+        return tF, kF, nF
+
+    @staticmethod
+    def match_static(input_times, input_indices, output):
+        """
+        Extracts the output spike times from the simulation output and
+        calculates the sample index for each output spike.
         """
 
         # Flaten and sort the input times and input indices for efficient search
-        total_input_count = reduce(lambda x, y: x + y,
-                map(len, self["input_times"]))
-        input_times = np.zeros(total_input_count)
-        input_indices = np.zeros(total_input_count, dtype=np.int32)
-        for i, t in enumerate(itertools.chain.from_iterable(
-                self["input_times"])):
-            input_times[i] = t
-        for i, t in enumerate(itertools.chain.from_iterable(
-                self["input_indices"])):
-            input_indices[i] = t
-        I = np.argsort(input_times)
-        input_times = input_times[I]
-        input_indices = input_indices[I]
+        tIn, kIn, _ = NetworkInstance.flaten(input_times, input_indices)
 
         # Build the output times
-        input_count = len(self["input_times"])
+        input_count = len(input_times)
         output_count = len(output) - input_count
         output_times = [[] for _ in xrange(output_count)]
         for i in xrange(output_count):
@@ -308,10 +366,248 @@ class NetworkInstance(dict):
             output_indices[i] = [0 for _ in xrange(len(output_times[i]))]
             for j in xrange(len(output_times[i])):
                 t = output_times[i][j]
-                idx = bisect.bisect_left(input_times, t)
+                idx = bisect.bisect_left(tIn, t)
                 if idx > 0:
                     idx = idx - 1
-                if idx < len(input_times):
-                    output_indices[i][j] = input_indices[idx]
+                if idx < len(tIn):
+                    output_indices[i][j] = kIn[idx]
 
         return output_times, output_indices
+
+    def match(self, output):
+        """
+        Extracts the output spike times from the simulation output and
+        calculates the sample index for each output spike.
+        """
+
+        return self.match_static(self["input_times"], self["input_indices"],
+                output)
+
+    @staticmethod
+    def split(times, indices, k0, k1):
+        times_part = [[] for _ in xrange(len(times))]
+        indices_part = [[] for _ in xrange(len(indices))]
+        for i in xrange(len(times)):
+            for j in xrange(len(times[i])):
+                if indices[i][j] >= k0 and indices[i][j] < k1:
+                    times_part[i].append(times[i][j])
+                    indices_part[i].append(indices[i][j] - k0)
+        return times_part, indices_part
+
+    @staticmethod
+    def build_analysis_static(input_times, input_indices, output,
+            input_split=[]):
+        # Fetch the output times and output indices
+        output_times, output_indices = NetworkInstance.match_static(input_times,
+                input_indices, output)
+
+        # Only assume a single split if no input_split descriptor is given
+        if (len(input_split) == 0):
+            input_split = [max(map(max, input_indices)) + 1]
+
+        # Split input and output spikes according to the input_split map, create
+        # a NetworkAnalysis instance for each split
+        res = []
+        k0 = 0
+        for k in input_split:
+            input_times_part, input_indices_part = NetworkInstance.split(
+                    input_times, input_indices, k0, k)
+            output_times_part, output_indices_part = NetworkInstance.split(
+                    output_times, output_indices, k0, k)
+            res.append(NetworkAnalysis(
+                    input_times=input_times_part,
+                    input_indices=input_indices_part,
+                    output_times=output_times_part,
+                    output_indices=output_indices_part))
+            k0 = k
+        return res
+
+    def build_analysis(self, output):
+        return self.build_analysis_static(self["input_times"],
+                self["input_indices"], output, self["input_split"])
+
+class NetworkPool(dict):
+    """
+    The NetworkPool represents a spatial multiplex of multiple networks. It
+    allows to add an arbitrary count of NetworkInstance objects and provides
+    a "build_analysis" method which splits the network output into individual
+    NetworkAnalysis object for each time/spatial multiplex.
+    """
+
+    def __init__(self, data={}, populations=[], connections=[],
+            input_times=[], input_indices=[], input_split=[], spatial_split=[]):
+        utils.init_key(self, data, "populations", populations)
+        utils.init_key(self, data, "connections", connections)
+        utils.init_key(self, data, "input_times", input_times)
+        utils.init_key(self, data, "input_indices", input_indices)
+        utils.init_key(self, data, "input_split", input_split)
+        utils.init_key(self, data, "spatial_split", spatial_split)
+
+        # Fix things up in case a NetworkInstance was passed to the constructor
+        if (len(self["spatial_split"]) == 0 and len(self["populations"]) > 0):
+            self["input_split"] = [self["input_split"]]
+            self["spatial_split"].append({
+                    "population": len(self["populations"]),
+                    "input": len(self["input_times"])
+                });
+
+    def add_network(self, network):
+        """
+        Adds a new NetworkInstance to the execution pool.
+        """
+
+        # Old population and connection count
+        nP0 = len(self["populations"])
+        nC0 = len(self["connections"])
+
+        # Append the network to the pool network
+        self["populations"] = self["populations"] + network["populations"]
+        self["connections"] = self["connections"] + network["connections"]
+        self["input_times"] = self["input_times"] + network["input_times"]
+        self["input_indices"] = self["input_indices"] + network["input_indices"]
+        self["input_split"].append(network["input_split"])
+
+        # Add a "spatial_split" -- this allows to dissect the network into its
+        # original parts after the result is available
+        nP1 = len(self["populations"])
+        nC1 = len(self["connections"])
+        nI1 = len(self["input_times"])
+        self["spatial_split"].append({"population": nP1, "input": nI1});
+
+        # Adapt the connection population indices of the newly added connections
+        for i in xrange(nC0, nC1):
+            c = self["connections"][i]
+            self["connections"][i] = ((c[0][0] + nP0, c[0][1]),
+                (c[1][0] + nP0, c[1][1]), c[2], c[3])
+
+    def add_networks(self, networks):
+        """
+        Adds a list of NetworkInstance instances to the execution pool.
+        """
+        for network in networks:
+            self.add_network(network)
+
+    def build_analysis(self, output):
+        """
+        Performs spatial and temporal demultiplexing of the conducted
+        experiments.
+        """
+
+        # Iterate over each spatial split and gather the analysis instances
+        res = []
+        last_split = {"population": 0, "input": 0}
+        for i, split in enumerate(self["spatial_split"]):
+            # Split the input times and the input indices at the positions
+            # stored in the split descriptor
+            input_times = self["input_times"][
+                    last_split["input"]:split["input"]]
+            input_indices = self["input_indices"][
+                    last_split["input"]:split["input"]]
+
+            # Split the output for the stored population range
+            output_part = output[last_split["population"]:split["population"]]
+
+            # Find the input_split descriptor, use an empty descriptor if no
+            # valid input_split descriptor was stored.
+            input_split = []
+            if (i < len(self["input_split"]) and
+                    isinstance(self["input_split"][i], list)):
+                input_split = self["input_split"][i]
+
+            # Let the NetworkInstance class build the analysis instances. This
+            # class is responsible for performing the temporal demultiplexing.
+            res = res + NetworkInstance.build_analysis_static(input_times,
+                input_indices, output_part, input_split)
+            last_split = split
+        return res
+
+class NetworkAnalysis(dict):
+    """
+    Contains the input and output spikes gathered for a single test run.
+    Provides methods for performing a storage capacity and latency analysis.
+    """
+
+    def __init__(self, data={}, input_times=[], input_indices=[],
+            output_times=[], output_indices=[]):
+        utils.init_key(self, data, "input_times", input_times)
+        utils.init_key(self, data, "input_indices", input_indices)
+        utils.init_key(self, data, "output_times", output_times)
+        utils.init_key(self, data, "output_indices", output_indices)
+
+    def calculate_latencies(self):
+        """
+        Calculates the latency of each sample for both an input and output spike
+        is available. Returns a list of latency values with an entry for each
+        sample. The latency for samples without a response is set to infinity.
+        """
+
+        # Flaten the input and output times and indices
+        tIn, kIn, _ = NetworkInstance.flaten(self["input_times"],
+                self["input_indices"], sort_by_sample=True)
+        tOut, kOut, _ = NetworkInstance.flaten(self["output_times"],
+                self["output_indices"], sort_by_sample=True)
+
+        # Fetch the number of samples
+        N = np.max(kIn) + 1
+        res = np.zeros(N)
+
+        # Calculate the latency for each sample
+        for k in xrange(N):
+            # Fetch index of the latest input and output spike time for sample k
+            iInK = bisect.bisect_right(kIn, k) - 1
+            iOutK = bisect.bisect_right(kOut, k) - 1
+
+            # Make sure the returned values are valid and actually refer to the
+            # current sample
+            if (iInK < 0 or iOutK < 0 or kIn[iInK] != k or kOut[iOutK] != k):
+                res[k] = np.inf
+            else:
+                res[k] = tOut[iOutK] - tIn[iInK]
+        return res
+
+    def calculate_output_matrix(self, topology_params={},
+            output_burst_size = 1):
+        """
+        Calculates a matrix containing the actually calculated output samples.
+        """
+
+        # Flaten the output spike sample indices and neuron indices
+        _, kOut, nOut = NetworkInstance.flaten(self["output_times"],
+                self["output_indices"], sort_by_sample=True)
+
+        # Fetch the neuron multiplicity
+        s = TopologyParameters(topology_params)["multiplicity"]
+
+        # Create the output matrix
+        N = max(map(lambda ks: max(ks + [0]), self["input_indices"])) + 1
+        n = len(self["output_indices"]) // s
+        res = np.zeros((N, n))
+
+        # Iterate over each sample
+        for k in xrange(N):
+            # Fetch the indices in the flat array corresponding to that sample
+            i0 = bisect.bisect_left(kOut, k)
+            i1 = bisect.bisect_right(kOut, k)
+
+            # For each output spike increment the corresponding entry in the
+            # output matrix
+            for i in xrange(i0, i1):
+                res[k, nOut[i] // s] = res[k, nOut[i] // s] + 1
+
+        # Scale the result matrix according to the output_burst_size
+        return res / float(output_burst_size)
+
+    def calculate_storage_capactiy(self, mat_out_expected, n_out_ones,
+            topology_params = {}, output_burst_size = 1):
+        """
+        Calculates the storage capacity of the BiNAM, given the expected output
+        data and number of ones in the output. Returns the information, the
+        output matrix and the error counts.
+        """
+        mat_out = self.calculate_output_matrix(
+                topology_params=topology_params,
+                output_burst_size=output_burst_size)
+        N, n = mat_out.shape
+        errs = binam_utils.calculate_errs(mat_out, mat_out_expected)
+        I = binam_utils.entropy_hetero(errs, n, n_out_ones)
+        return I, mat_out, errs
