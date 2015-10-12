@@ -320,7 +320,13 @@ class BiNAM(BinaryMatrix):
                 self.arr[i] = np.bitwise_or(self.arr[i], vec_out)
 
     def evaluate(self, vec_in, threshold = -1):
-        """Returns the output of the BiNAM for the given input vector."""
+        """
+        Returns the output of the BiNAM for the given input vector.
+
+        :param vec_in: input vector that should be evaluated.
+        :param threshold: threshold value -- values after the matrix-vector
+        multiplication larger or equal to the threshold are set to one.
+        """
         # Make sure vec_in is a numpy array and has the correct size
         vec_in = np.asarray(vec_in, dtype=np.uint8)
         assert(vec_in.size == self.n_rows)
