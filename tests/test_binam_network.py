@@ -63,7 +63,7 @@ class TestNetworkBuilder(unittest.TestCase):
         mat_out[2, 1] = 1
 
         net = NetworkBuilder(mat_in, mat_out)
-        topo = net.build_topology()
+        topo = net.build_topology(topology_params={"params": {"cm": 0.2}})
         self.assertEqual(set(topo["connections"]), set([
             ((0, 0), (6, 0), 0.03, 0.0),
             ((0, 0), (9, 0), 0.03, 0.0),
@@ -77,6 +77,30 @@ class TestNetworkBuilder(unittest.TestCase):
             ((3, 0), (6, 0), 0.03, 0.0),
             ((4, 0), (7, 0), 0.03, 0.0),
             ((4, 0), (8, 0), 0.03, 0.0)]))
+        self.assertEqual(topo["populations"], [
+                {'count': 1,
+                 'params': {'spike_times': []},
+                 'type': 'SpikeSourceArray',
+                 'record': []}
+            ] * 5 + [
+                {'count': 1,
+                 'params': {
+                    'tau_refrac': 0.1,
+                    'tau_m': 20.0,
+                    'e_rev_E': 0.0,
+                    'i_offset': 0.0,
+                    'cm': 0.2,
+                    'e_rev_I': -70.0,
+                    'v_thresh': -50.0,
+                    'tau_syn_E': 5.0,
+                    'v_rest': -65.0,
+                    'tau_syn_I': 5.0,
+                    'v_reset': -65.0
+                },
+                'record': ['spikes'],
+                'type': 'IF_cond_exp'
+                }
+            ] * 5)
 
         net = NetworkBuilder(mat_in, mat_out)
         topo = net.build_topology(topology_params={"multiplicity": 2, "w": 0.1})
