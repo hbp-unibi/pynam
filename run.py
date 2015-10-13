@@ -39,28 +39,95 @@
 #     Examples:
 #         cat config.json | ./run.py --simulation > result.json
 
+import numpy as np
 import pynam
+import pynam.binam_utils
 import pynnless as pynl
+import scipy.io as scio
+import sys
+
+if (len(sys.argv) != 2):
+    print("Usage: " + sys.argv[0] + " <SIMULATOR>")
+    sys.exit(1)
 
 # Generate test data
 print "Generate test data..."
-mat_in = pynam.generate(n_bits=32, n_ones=3, n_samples=1)
-mat_out = pynam.generate(n_bits=32, n_ones=3, n_samples=1)
+m = 32
+n = 16
+c = 3
+d = 3
+N = 100
+
+topology_params = {
+    "w": 0.020,
+    "params": {
+        "cm": 0.2,
+        "e_rev_E": 0,
+        "e_rev_I": -100,
+        "v_rest": -50,
+        "v_reset": -70,
+        "v_thresh": -41.199,
+        "tau_syn_E": 1.0,
+        "tau_m": 16.546,
+        "tau_refrac": 20.0
+    }
+}
+
+input_params = {
+    "time_window": 1000.0
+}
+
+mat_in = pynam.generate(n_bits=m, n_ones=c, n_samples=N)
+mat_out_expected = pynam.generate(n_bits=n, n_ones=d, n_samples=N)
+
+# Train a reference binam
+binam = pynam.BiNAM(m, n)
+binam.train_matrix(mat_in, mat_out_expected)
+mat_out_ref = binam.evaluate_matrix(mat_in)
+errs_ref = pynam.binam_utils.calculate_errs(mat_out_ref, mat_out_expected)
+I_ref = pynam.binam_utils.entropy_hetero(errs_ref, n, d)
 
 # Build the network and the metadata
 print "Build network..."
-builder = pynam.NetworkBuilder(mat_in, mat_out)
-net = builder.build(topology_params={"weight": 1})
+builder = pynam.NetworkBuilder(mat_in, mat_out_expected)
+net = builder.build(topology_params=topology_params, input_params=input_params)
 
 # Run the simulation
 print "Initialize simulator..."
-sim = pynl.PyNNLess("nest")
+sim = pynl.PyNNLess(sys.argv[1])
 print "Run simulation..."
 output = sim.run(net)
 
 # Fetch the output times and output indices from the output data
 print "Analyze result..."
-print net["input_times"], net["input_indices"]
-output_times, output_indices = net.match(output)
+analysis = net.build_analysis(output)[0]
+I, mat_out, errs = analysis.calculate_storage_capactiy(mat_out_expected, d,
+        topology_params=topology_params)
+latency = analysis.calculate_latencies()
 
-print output_times, output_indices
+print "INFORMATION: ", I, " of a theoretical ", I_ref
+print "MAT OUT:\n", mat_out
+print "MAT OUT (reference):\n", mat_out_ref
+print "MAT OUT EXPECTED:\n", mat_out_expected
+print "AVG. LATENCY:\n", np.mean(latency)
+print "LATENCIES:\n", latency
+
+scio.savemat("res.mat", {
+    "mat_in": mat_in,
+    "mat_out_expected": mat_out,
+    "mat_out_ref": mat_out_ref,
+    "mat_out": mat_out,
+    "errs": errs,
+    "errs_ref": errs_ref,
+    "I": I,
+    "I_ref": I_ref,
+    "latency": latency,
+    "topology_params": topology_params,
+    "input_params": input_params,
+    "m": m,
+    "n": n,
+    "c": c,
+    "d": d,
+    "N": N
+})
+
