@@ -333,9 +333,9 @@ class NetworkInstance(dict):
                 nF[c] = i
                 c = c + 1
 
-        # Sort the arrays by spike time
+        # Sort the arrays by spike time or sample
         if sort_by_sample:
-            I = np.argsort(kF)
+            I = np.lexsort((kF, tF))
         else:
             I = np.argsort(tF)
         tF = tF[I]
