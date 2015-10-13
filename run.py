@@ -66,9 +66,9 @@ topology_params = {
         "e_rev_I": -100,
         "v_rest": -50,
         "v_reset": -70,
-        "v_thresh": -41.199,
+        "v_thresh": -47.0,
         "tau_syn_E": 1.0,
-        "tau_m": 16.546,
+        "tau_m": 409.0,
         "tau_refrac": 20.0
     }
 }
