@@ -52,11 +52,11 @@ if (len(sys.argv) != 2):
 
 # Generate test data
 print "Generate test data..."
-m = 32
-n = 16
+m = 8
+n = 8
 c = 3
 d = 3
-N = 100
+N = 10
 
 topology_params = {
     "w": 0.016,
