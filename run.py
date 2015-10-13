@@ -73,7 +73,8 @@ topology_params = {
 }
 
 input_params = {
-    "time_window": 1000.0
+    "time_window": 500.0,
+    "sigma_t": 5.0
 }
 
 mat_in = pynam.generate(n_bits=m, n_ones=c, n_samples=N)
@@ -96,6 +97,8 @@ print "Initialize simulator..."
 sim = pynl.PyNNLess(sys.argv[1])
 print "Run simulation..."
 output = sim.run(net)
+
+print "OUTPUT:\n", output
 
 # Fetch the output times and output indices from the output data
 print "Analyze result..."
