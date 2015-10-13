@@ -59,15 +59,14 @@ d = 3
 N = 100
 
 topology_params = {
-    "w": 0.020,
+    "w": 0.016,
     "params": {
         "cm": 0.2,
-        "e_rev_E": 0,
-        "e_rev_I": -100,
+        "e_rev_E": -40,
+        "e_rev_I": -60,
         "v_rest": -50,
         "v_reset": -70,
-        "v_thresh": -47.0,
-        "tau_syn_E": 1.0,
+        "v_thresh": -47,
         "tau_m": 409.0,
         "tau_refrac": 20.0
     }
