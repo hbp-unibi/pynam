@@ -29,33 +29,78 @@ import numpy as np
 import pynnless as pynl
 import pynnless.pynnless_utils as utils
 
+def rmax(xs):
+    """
+    Roboust max function, returns -Inf if xs is empty.
+    """
+    return -np.inf if len(xs) == 0 else max(xs)
+
+def rmin(xs):
+    """
+    Roboust min function, returns Inf if xs is empty.
+    """
+    return np.inf if len(xs) == 0 else min(xs)
+
 class InputParameters(dict):
     """
     Contains parameters which concern the generation of input data.
     """
 
     def __init__(self, data={}, burst_size=1, time_window=100.0, isi=1.0,
-            sigma_t=0.0, sigma_t_offs=0.0):
+            sigma_t=0.0, sigma_t_offs=0.0, p0=0.0, p1=0.0):
+        """
+        Constructor of the InputParameters class. If a dictionary or another
+        InputParameters class is passed as first parameter, elements from this
+        instance are copied with a precedence over the specified parameters.
+
+        :param data: dictionary from which parameters are copied preferably.
+        :param burst_size: number of spikes representing a "one".
+        :param time_window: time between the presentation of two input samples.
+        :param isi: inter spike interval between spike of a burst.
+        :param sigma_t: spike jitter
+        :param sigma_t_offs: spike offset jitter
+        :param p0: probability with which individual spikes are omitted.
+        :param p1: probability with which spikes from a "one" are randomly
+        introduced for a sample containing zeros.
+        """
         utils.init_key(self, data, "burst_size", burst_size)
         utils.init_key(self, data, "time_window", time_window)
         utils.init_key(self, data, "isi", isi)
         utils.init_key(self, data, "sigma_t", sigma_t)
         utils.init_key(self, data, "sigma_t_offs", sigma_t_offs)
+        utils.init_key(self, data, "p0", p0)
+        utils.init_key(self, data, "p1", p1)
 
-    def build_spike_train(self, offs=0.0):
-        res = np.zeros(self["burst_size"])
+    def build_spike_train(self, value=1, offs=0.0):
+        """
+        Builds a spike train representing the given binary value according to
+        the parameters stored in the InputParameters dictionary.
+
+        :param value: the binary value that should be represented by this spike
+        train. If zero, spikes are only generated according to the probability
+        p1.
+        :param offs: total time offset.
+        """
+        res = []
 
         # Draw the actual spike offset
         if (self["sigma_t_offs"] > 0):
             offs = np.random.normal(offs, self["sigma_t_offs"])
 
         # Calculate the time of each spike
+        if value == 1:
+            p = self["p0"]
+        else:
+            p = 1.0 - self["p1"]
+
         for i in xrange(self["burst_size"]):
-            jitter = 0
-            if (self["sigma_t"] > 0):
-                jitter = np.random.normal(0, self["sigma_t"])
-            res[i] = offs + i * self["isi"] + jitter
-        return np.sort(res)
+            if (np.random.uniform() >= p):
+                jitter = 0
+                if (self["sigma_t"] > 0):
+                    jitter = np.random.normal(0, self["sigma_t"])
+                res.append(offs + i * self["isi"] + jitter)
+        res.sort()
+        return res
 
 
 class TopologyParameters(dict):
@@ -208,61 +253,44 @@ class NetworkBuilder:
         else:
             X = np.array(self.mat_in, dtype=np.uint8)
 
+        # Make sure input_params is a list
+        if not isinstance(input_params, list):
+            input_params = [input_params]
+
         # Fetch the multiplicity s from the topology parameters
         s = TopologyParameters(topology_params)["multiplicity"]
 
-        # Calculate the total maximum number of input spikes ovar all input
-        # parameter sets
-        max_num_spikes = 0
-        if not isinstance(input_params, list):
-            input_params = [input_params]
-        for ip in input_params:
-            p = InputParameters(ip)
-            b = p["burst_size"]
-            max_num_spikes = max_num_spikes + np.max(np.sum(X, 0)) * b
-
-        # Create continuous two-dimensional target matrices
-        T = np.zeros((s * self.m, max_num_spikes))
-        K = np.zeros((s * self.m, max_num_spikes), dtype=np.int32)
-        N = np.zeros(self.m, dtype=np.uint32)
+        # Resulting times and indices
+        input_times = [[] for _ in xrange(s * self.m)]
+        input_indices = [[] for _ in xrange(s * self.m)]
 
         # Handle all input parameter sets
         t = 0
         sIdx = 0
         min_t = np.inf
         for ip in input_params:
+            # Convert the parameters into a normalized InputParameters instance
             p = InputParameters(ip)
-            b = p["burst_size"]
 
             # Calculate the maximum number of spikes, create two two-dimensional
             # matrix which contain the spike times and the sample indics
             for l in xrange(k):
                 for i in xrange(self.m):
-                    if X[l, i] != 0:
-                        for j in xrange(s):
-                            train = p.build_spike_train(t)
-                            min_t = np.min([min_t, np.min(train)])
-                            T[i * s + j, (N[i]):(N[i] + b)] = train
-                            K[i * s + j, (N[i]):(N[i] + b)] = sIdx
-                        N[i] = N[i] + b
+                    for j in xrange(s):
+                        train = p.build_spike_train(value=X[l, i], offs=t)
+                        idx = i * s + j
+                        input_times[idx] = input_times[idx] + train
+                        input_indices[idx] = (input_indices[idx] +
+                                [sIdx] * len(train))
                 sIdx = sIdx + 1
                 t = t + p["time_window"]
             t = t + p["time_window"] * input_params_delay
 
         # Offset the first spike time to time_offs
-        T = T - min_t + time_offs
+        min_t = min(map(rmin, input_times))
+        input_times = map(lambda ts: map(lambda t: t - min_t, ts), input_times)
 
-        # Extract a list of times and indices for each neuron
-        input_times = [[] for _ in xrange(s * self.m)]
-        input_indices = [[] for _ in xrange(s * self.m)]
-        for i in xrange(self.m):
-            for j in xrange(s):
-                x = i * s + j
-                I = np.argsort(T[x, 0:N[i]])
-                input_times[x] = T[x, I].tolist()
-                input_indices[x] = K[x, I].tolist()
-
-        # Sample indices at which new input parameter sets start
+        # Store the sample indices at which new input parameter sets start
         input_split = range(k, k * (len(input_params) + 1), k)
 
         return input_times, input_indices, input_split
@@ -579,7 +607,7 @@ class NetworkAnalysis(dict):
         s = TopologyParameters(topology_params)["multiplicity"]
 
         # Create the output matrix
-        N = max(map(lambda ks: max(ks + [0]), self["input_indices"])) + 1
+        N = max(map(rmax, self["input_indices"])) + 1
         n = len(self["output_indices"]) // s
         res = np.zeros((N, n))
 
