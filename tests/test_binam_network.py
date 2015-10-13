@@ -30,21 +30,9 @@ from pynam.binam_network import (
         NetworkPool,
         NetworkAnalysis)
 
-
-class TestInputParameters(unittest.TestCase):
-
-    def test_build_spike_train(self):
-        params = InputParameters()
-        res = params.build_spike_train()
-        numpy.testing.assert_equal([0.0], res)
-
-        params = InputParameters(burst_size=2)
-        res = params.build_spike_train()
-        numpy.testing.assert_equal([0.0, 1.0], res)
-
-        params = InputParameters(burst_size=3, isi=4)
-        res = params.build_spike_train()
-        numpy.testing.assert_equal([0.0, 4.0, 8.0], res)
+#
+# Test utility functions
+#
 
 def test_data():
     mat_in = BinaryMatrix(3, 5)
@@ -64,6 +52,64 @@ def test_data():
     mat_out[2, 1] = 1
 
     return mat_in, mat_out
+
+time_mux_output_data = [
+            {}, {}, {}, {}, {},
+            {"spikes": [[0.0, 100.0, 1301.0, 1400.0]]},
+            {"spikes": [[101.0, 1401.0]]},
+            {"spikes": [[300.0, 301.0, 1600.0, 1601.0]]},
+            {"spikes": [[200.0, 1500.0]]},
+            {"spikes": [[201.0, 101.0, 1501.0, 1401.0]]}
+        ]
+
+def test_time_mux_res(self, analysis_instances):
+    self.assertEqual(2, len(analysis_instances))
+
+    self.assertEqual(
+        analysis_instances[0]["input_times"],
+        [[100.0], [100.0], [0.0, 200.0], [200.0], [0.0]])
+    self.assertEqual(
+        analysis_instances[0]["input_indices"],
+        [[1], [1], [0, 2], [2], [0]])
+    self.assertEqual(
+        analysis_instances[0]["output_times"],
+        [[0.0, 100.0], [101.0], [300.0, 301.0], [200.0], [201.0, 101.0]])
+    self.assertEqual(
+        analysis_instances[0]["output_indices"],
+        [[0, 0], [1], [2, 2], [1], [2, 1]])
+
+    self.assertEqual(
+        analysis_instances[1]["input_times"],
+        [[1400.0], [1400.0], [1300.0, 1500.0], [1500.0], [1300.0]])
+    self.assertEqual(
+        analysis_instances[1]["input_indices"],
+        [[1], [1], [0, 2], [2], [0]])
+    self.assertEqual(
+        analysis_instances[1]["output_times"],
+        [[1301.0, 1400.0], [1401.0], [1600.0, 1601.0], [1500.0],
+         [1501.0, 1401.0]])
+    self.assertEqual(
+        analysis_instances[1]["output_indices"],
+        [[0, 0], [1], [2, 2], [1], [2, 1]])
+
+#
+# Unit tests
+#
+
+class TestInputParameters(unittest.TestCase):
+
+    def test_build_spike_train(self):
+        params = InputParameters()
+        res = params.build_spike_train()
+        numpy.testing.assert_equal([0.0], res)
+
+        params = InputParameters(burst_size=2)
+        res = params.build_spike_train()
+        numpy.testing.assert_equal([0.0, 1.0], res)
+
+        params = InputParameters(burst_size=3, isi=4)
+        res = params.build_spike_train()
+        numpy.testing.assert_equal([0.0, 4.0, 8.0], res)
 
 class TestNetworkBuilder(unittest.TestCase):
 
@@ -268,44 +314,6 @@ class TestNetworkBuilder(unittest.TestCase):
                 times)
         self.assertEqual([[1], [1], [0, 2], [2], [0]], indices)
 
-time_mux_output_data = [
-            {}, {}, {}, {}, {},
-            {"spikes": [[0.0, 100.0, 1301.0, 1400.0]]},
-            {"spikes": [[101.0, 1401.0]]},
-            {"spikes": [[300.0, 301.0, 1600.0, 1601.0]]},
-            {"spikes": [[200.0, 1500.0]]},
-            {"spikes": [[201.0, 101.0, 1501.0, 1401.0]]}
-        ]
-
-def test_time_mux_res(self, analysis_instances):
-    self.assertEqual(2, len(analysis_instances))
-
-    self.assertEqual(
-        analysis_instances[0]["input_times"],
-        [[100.0], [100.0], [0.0, 200.0], [200.0], [0.0]])
-    self.assertEqual(
-        analysis_instances[0]["input_indices"],
-        [[1], [1], [0, 2], [2], [0]])
-    self.assertEqual(
-        analysis_instances[0]["output_times"],
-        [[0.0, 100.0], [101.0], [300.0, 301.0], [200.0], [201.0, 101.0]])
-    self.assertEqual(
-        analysis_instances[0]["output_indices"],
-        [[0, 0], [1], [2, 2], [1], [2, 1]])
-
-    self.assertEqual(
-        analysis_instances[1]["input_times"],
-        [[1400.0], [1400.0], [1300.0, 1500.0], [1500.0], [1300.0]])
-    self.assertEqual(
-        analysis_instances[1]["input_indices"],
-        [[1], [1], [0, 2], [2], [0]])
-    self.assertEqual(
-        analysis_instances[1]["output_times"],
-        [[1301.0, 1400.0], [1401.0], [1600.0, 1601.0], [1500.0],
-         [1501.0, 1401.0]])
-    self.assertEqual(
-        analysis_instances[1]["output_indices"],
-        [[0, 0], [1], [2, 2], [1], [2, 1]])
 
 class TestNetworkInstance(unittest.TestCase):
 
