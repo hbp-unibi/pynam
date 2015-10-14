@@ -59,7 +59,7 @@ d = 3
 N = 10
 
 topology_params = {
-    "w": 0.016,
+    "w": 0.004,
     "params": {
         "cm": 0.2,
         "e_rev_E": -40,
@@ -97,8 +97,6 @@ print "Initialize simulator..."
 sim = pynl.PyNNLess(sys.argv[1])
 print "Run simulation..."
 output = sim.run(net)
-
-print "OUTPUT:\n", output
 
 # Fetch the output times and output indices from the output data
 print "Analyze result..."
