@@ -53,6 +53,23 @@ def test_data():
 
     return mat_in, mat_out
 
+def test_data2():
+    mat_in = BinaryMatrix(2, 4)
+    mat_in[0, 3] = 1
+    mat_in[0, 1] = 1
+    mat_in[1, 0] = 1
+    mat_in[1, 1] = 1
+
+    mat_out = BinaryMatrix(2, 6)
+    mat_out[0, 0] = 1
+    mat_out[0, 1] = 1
+    mat_out[0, 4] = 1
+    mat_out[1, 2] = 1
+    mat_out[1, 3] = 1
+    mat_out[1, 5] = 1
+
+    return mat_in, mat_out
+
 time_mux_output_data = [
             {}, {}, {}, {}, {},
             {"spikes": [[0.0, 100.0, 1301.0, 1400.0]]},
@@ -112,6 +129,33 @@ class TestInputParameters(unittest.TestCase):
         numpy.testing.assert_equal([0.0, 4.0, 8.0], res)
 
 class TestNetworkBuilder(unittest.TestCase):
+
+    def test_init_mat(self):
+        mat_in, mat_out = test_data2()
+        net = NetworkBuilder(mat_in, mat_out)
+
+        self.assertEqual(4, net.data_params["n_bits_in"])
+        self.assertEqual(6, net.data_params["n_bits_out"])
+        self.assertEqual(2, net.data_params["n_ones_in"])
+        self.assertEqual(3, net.data_params["n_ones_out"])
+        self.assertEqual(2, net.data_params["n_samples"])
+
+    def test_init_data(self):
+        net = NetworkBuilder(data_params={
+            "n_bits_in": 8,
+            "n_bits_out": 10,
+            "n_ones_in": 3,
+            "n_ones_out": 5,
+            "n_samples": 20
+        })
+
+        net2 = NetworkBuilder(net.mat_in, net.mat_out)
+
+        self.assertEqual(8, net2.data_params["n_bits_in"])
+        self.assertEqual(10, net2.data_params["n_bits_out"])
+        self.assertEqual(3, net2.data_params["n_ones_in"])
+        self.assertEqual(5, net2.data_params["n_ones_out"])
+        self.assertEqual(20, net2.data_params["n_samples"])
 
     def test_build_topology(self):
         mat_in, mat_out = test_data()
@@ -238,13 +282,7 @@ class TestNetworkBuilder(unittest.TestCase):
         self.assertEqual([3], split)
 
     def test_build_multi_input(self):
-        mat_in = BinaryMatrix(2, 4)
-        mat_in[0, 3] = 1
-        mat_in[0, 1] = 1
-        mat_in[1, 0] = 1
-        mat_in[1, 1] = 1
-
-        mat_out = BinaryMatrix(2, 6)
+        mat_in, mat_out = test_data2()
 
         net = NetworkBuilder(mat_in, mat_out)
         times, indices, split = net.build_input(
