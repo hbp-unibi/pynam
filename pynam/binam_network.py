@@ -41,6 +41,21 @@ def rmin(xs):
     """
     return np.inf if len(xs) == 0 else min(xs)
 
+class DataParameters(dict):
+    """
+    Stores the data meta-parameters (number of input and output bits,
+    number of samples, number of set ones)
+    """
+
+    def __init__(self, data={}, n_bits_in=16, n_bits_out=16, n_ones_in=3,
+            n_ones_out=3, n_samples = 100):
+        utils.init_key(self, data, "n_bits_in", n_bits_in)
+        utils.init_key(self, data, "n_bits_out", n_bits_out)
+        utils.init_key(self, data, "n_ones_in", n_ones_in)
+        utils.init_key(self, data, "n_ones_out", n_ones_out)
+        utils.init_key(self, data, "n_samples", n_samples)
+
+
 class InputParameters(dict):
     """
     Contains parameters which concern the generation of input data.
@@ -151,20 +166,14 @@ class TopologyParameters(dict):
 
 class NetworkBuilder:
 
-    # Number of samples
-    N = 0
-
-    # Input dimensionality
-    m = 0
-
-    # Output dimensionality
-    n = 0
-
     # Input data matrix
     mat_in = None
 
     # Output data matrix
     mat_out = None
+
+    # Data parameters
+    data_params = None
 
     # Internally cached BiNAM instance
     mem = None
@@ -172,7 +181,16 @@ class NetworkBuilder:
     # Last sample until which the BiNAM has been trained
     last_k = 0
 
-    def __init__(self, mat_in, mat_out):
+    @staticmethod
+    def _n_ones(mat):
+        m, n = mat.shape
+        if m > 0:
+            # Use the number of ones in the first row
+            return np.sum(mat[0])
+        else:
+            return 0
+
+    def __init__(self, mat_in=None, mat_out=None, data_params=None, seed=None):
         """
         Constructor of the NetworkBuilder class -- the NetworkBuilder collects
         information about a network (storage matrix, noise parameters and input
@@ -180,28 +198,47 @@ class NetworkBuilder:
 
         :param mat_in: Nxm matrix containing the input data
         :param mat_out: Nxn matrix containing the output data
-        :param s: neuron multiplicity
         """
-        self.mat_in = mat_in
-        self.mat_out = mat_out
 
-        assert(mat_in.shape[0] == mat_out.shape[0])
-        self.N = mat_in.shape[0]
-        self.m = mat_in.shape[1]
-        self.n = mat_out.shape[1]
+        # Make sure that either data parameters are given or an input
+        # and output matrix
+        assert((mat_in == None) == (mat_out == None))
+        assert((mat_in == None) != (data_params == None))
+
+        if mat_in != None:
+            # If a matrices are given, derive the data parameters from those
+            self.mat_in = mat_in
+            self.mat_out = mat_out
+
+            assert(mat_in.shape[0] == mat_out.shape[0])
+            self.data_params = DataParameters(
+                n_bits_in = mat_in.shape[1],
+                n_bits_out = mat_out.shape[1],
+                n_ones_in = self._n_ones(mat_in),
+                n_ones_out = self._n_ones(mat_out),
+                n_samples = mat_in.shape[0]
+            )
+        else:
+            # The use supplied data parameters -- generate the data matrices
+            self.data_params = DataParameters(data_params)
 
     def build_topology(self, k=-1, seed=None, topology_params={}):
         """
         Builds a network for a BiNAM that has been trained up to the k'th sample
         """
 
+        # Fetch the data parameters for convenient access
+        N = self.data_params["n_samples"]
+        m = self.data_params["n_bits_in"]
+        n = self.data_params["n_bits_out"]
+
         # If k is smaller than zero, use the number of samples instead
-        if k < 0 or k > self.N:
-            k = self.N
+        if k < 0 or k > N:
+            k = N
 
         # Train the BiNAM from the last trained sample last_k up to k
         if self.mem == None or self.last_k > k:
-            self.mem = binam.BiNAM(self.m, self.n)
+            self.mem = binam.BiNAM(m, n)
         for l in xrange(self.last_k, k):
             self.mem.train(self.mat_in[l], self.mat_out[l])
         self.last_k = k
@@ -210,10 +247,10 @@ class NetworkBuilder:
         t = TopologyParameters(topology_params)
         s = t["multiplicity"]
         net = pynl.Network()
-        for i in xrange(self.m):
+        for i in xrange(m):
             for j in xrange(s):
                 net.add_source()
-        for i in xrange(self.n):
+        for i in xrange(n):
             for j in xrange(s):
                 net.add_neuron(params=t.draw(), _type=t["neuron_type"],
                         record=pynl.SIG_SPIKES)
@@ -222,11 +259,11 @@ class NetworkBuilder:
             return (i * s + k, 0)
 
         def out_coord(j, k=1):
-            return (self.m * s + j * s + k, 0)
+            return (m * s + j * s + k, 0)
 
         # Add all connections
-        for i in xrange(self.m):
-            for j in xrange(self.n):
+        for i in xrange(m):
+            for j in xrange(n):
                 if self.mem[i, j] != 0:
                     net.add_connections([
                         (in_coord(i, k), out_coord(j, l), t.draw_weight(), 0.0)
@@ -243,9 +280,14 @@ class NetworkBuilder:
         in this case multiple input spike trains are created.
         """
 
+        # Fetch the data parameters for convenient access
+        N = self.data_params["n_samples"]
+        m = self.data_params["n_bits_in"]
+        n = self.data_params["n_bits_out"]
+
         # If k is smaller than zero, use the number of samples instead
-        if k < 0 or k > self.N:
-            k = self.N
+        if k < 0 or k > N:
+            k = N
 
         # Make sure mat_in is a numpy array
         if isinstance(self.mat_in, binam.BinaryMatrix):
@@ -261,8 +303,8 @@ class NetworkBuilder:
         s = TopologyParameters(topology_params)["multiplicity"]
 
         # Resulting times and indices
-        input_times = [[] for _ in xrange(s * self.m)]
-        input_indices = [[] for _ in xrange(s * self.m)]
+        input_times = [[] for _ in xrange(s * m)]
+        input_indices = [[] for _ in xrange(s * m)]
 
         # Handle all input parameter sets
         t = 0
@@ -275,7 +317,7 @@ class NetworkBuilder:
             # Calculate the maximum number of spikes, create two two-dimensional
             # matrix which contain the spike times and the sample indics
             for l in xrange(k):
-                for i in xrange(self.m):
+                for i in xrange(m):
                     for j in xrange(s):
                         train = p.build_spike_train(value=X[l, i], offs=t)
                         idx = i * s + j
