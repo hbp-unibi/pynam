@@ -157,6 +157,27 @@ class TestNetworkBuilder(unittest.TestCase):
         self.assertEqual(5, net2.data_params["n_ones_out"])
         self.assertEqual(20, net2.data_params["n_samples"])
 
+    def test_init_data_seed(self):
+        net1 = NetworkBuilder(data_params={
+            "n_bits_in": 8,
+            "n_bits_out": 10,
+            "n_ones_in": 3,
+            "n_ones_out": 5,
+            "n_samples": 20
+        }, seed = 15412)
+        net2 = NetworkBuilder(data_params={
+            "n_bits_in": 8,
+            "n_bits_out": 10,
+            "n_ones_in": 3,
+            "n_ones_out": 5,
+            "n_samples": 40
+        }, seed = 15412)
+
+        # The first twenty samples must be equal
+        np.testing.assert_equal(net1.mat_in, net2.mat_in[0:20])
+        np.testing.assert_equal(net1.mat_out, net2.mat_out[0:20])
+
+
     def test_build_topology(self):
         mat_in, mat_out = test_data()
         net = NetworkBuilder(mat_in, mat_out)

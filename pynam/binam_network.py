@@ -42,7 +42,7 @@ def rmin(xs):
     """
     return np.inf if len(xs) == 0 else min(xs)
 
-def initialize_seed(seed):
+def initialize_seed(seed, seq=1):
     """
     Initializes the numpy random number generator seed with the given seed
     value. The seed value may be None, in which case no changes the the numpy
@@ -52,7 +52,7 @@ def initialize_seed(seed):
     if seed is None:
         return None
     old_state = np.random.get_state()
-    np.random.seed(seed)
+    np.random.seed(seed * (seq + 1))
     return old_state
 
 def finalize_seed(old_state):
@@ -71,6 +71,15 @@ class DataParameters(dict):
 
     def __init__(self, data={}, n_bits_in=16, n_bits_out=16, n_ones_in=3,
             n_ones_out=3, n_samples = 100):
+        """
+        Fills the network structure with the given parameters.
+
+        :param n_bits_in: number of input bits.
+        :param n_bits_out: number of output bits.
+        :param n_ones_in: number of ones in the input per sample.
+        :param n_ones_out: number of ones in the output per sample.
+        :param n_samples: number of samples.
+        """
         utils.init_key(self, data, "n_bits_in", n_bits_in)
         utils.init_key(self, data, "n_bits_out", n_bits_out)
         utils.init_key(self, data, "n_ones_in", n_ones_in)
@@ -232,12 +241,19 @@ class NetworkBuilder:
             self.data_params = DataParameters(data_params)
 
             # Set the random number generator seed and generate the data
-            old_seed = initialize_seed(seed)
+            old_seed = initialize_seed(seed, 1)
             try:
                 self.mat_in = binam_data.generate(
                     n_bits = self.data_params["n_bits_in"],
                     n_ones = self.data_params["n_ones_in"],
                     n_samples = self.data_params["n_samples"])
+            finally:
+                finalize_seed(old_seed)
+
+            # Reset the random number generator seed to make sure that the first
+            # n_samples are always the same
+            old_seed = initialize_seed(seed, 2)
+            try:
                 self.mat_out = binam_data.generate(
                     n_bits = self.data_params["n_bits_out"],
                     n_ones = self.data_params["n_ones_out"],
