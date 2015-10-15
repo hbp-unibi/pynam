@@ -402,6 +402,11 @@ class NetworkBuilder:
         Builds a network with the given topology and input data that is ready
         to be handed of to PyNNLess.
         """
+
+        # If k is smaller than zero, use the number of samples instead
+        if k < 0 or k > N:
+            k = self.data_params["n_samples"]
+
         topology = self.build_topology(k, topology_params=topology_params)
         input_times, input_indices, input_split = self.build_input(k,
                 time_offs=time_offs,
@@ -411,7 +416,8 @@ class NetworkBuilder:
                 self.inject_input(topology, input_times),
                 input_times=input_times,
                 input_indices=input_indices,
-                input_split=input_split)
+                input_split=input_split,
+                data_params = DataParameters(self.data_params, n_samples=k))
 
 class NetworkInstance(dict):
     """
@@ -422,12 +428,13 @@ class NetworkInstance(dict):
     """
 
     def __init__(self, data={}, populations=[], connections=[],
-            input_times=[], input_indices=[], input_split=[]):
+            input_times=[], input_indices=[], input_split=[], data_params={}):
         utils.init_key(self, data, "populations", populations)
         utils.init_key(self, data, "connections", connections)
         utils.init_key(self, data, "input_times", input_times)
         utils.init_key(self, data, "input_indices", input_indices)
         utils.init_key(self, data, "input_split", input_split)
+        utils.init_key(self, data, "data_params", DataParameters(data_params))
 
     @staticmethod
     def flaten(times, indices, sort_by_sample=False):
