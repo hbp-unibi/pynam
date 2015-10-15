@@ -109,6 +109,19 @@ def test_time_mux_res(self, analysis_instances):
         analysis_instances[1]["output_indices"],
         [[0, 0], [1], [2, 2], [1], [2, 1]])
 
+def stub_simulation(mat_out, data_params={}, input_params={},
+        topology_params={}, latency=1.0):
+    # Build the output spike trains
+    trains, _, _ = NetworkBuilder.build_spike_trains(mat_out, time_offs=latency,
+            input_params=input_params, topology_params=topology_params)
+
+    # Encapsulate the perfect spike trains in the PyNNLess output format, add
+    # empty elements for the input populations
+    nin = (data_params["n_bits_in"]
+            * TopologyParameters(topology_params)["multiplicity"])
+    return ([{} for _ in xrange(nin)] +
+            [{"spikes": [train]} for train in trains])
+
 #
 # Unit tests
 #
@@ -393,6 +406,19 @@ class TestNetworkInstance(unittest.TestCase):
             [201.0, 101.0]], output_spikes)
         self.assertEqual([[0, 0], [1], [2, 2], [1], [2, 1]], output_indices)
 
+    def test_match_negative(self):
+        input_times = [[100.0], [200.0], [300.0], [400.0]]
+        input_indices = [[0], [1], [2], [3]]
+        output = [
+            {}, {}, {}, {},
+            {"spikes": [[95.0]]}, {"spikes": [[195.0]]}, {"spikes": [[295.0]]},
+            {"spikes": [[395.0]]}
+        ]
+        output_spikes, output_indices = NetworkInstance.match_static(
+                input_times, input_indices, output)
+        self.assertEqual(output_spikes, [[95.0], [195.0], [295.0], [395.0]])
+        self.assertEqual(output_indices, [[0], [0], [1], [2]])
+
     def test_split(self):
         times = [[1.0, 2.0, 3.0, 4.0, 5.0], [3.0, 4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]
         indices = [[1, 2, 3, 4, 5], [3, 4, 5, 6], [7, 8, 9]]
@@ -441,6 +467,35 @@ class TestNetworkPool(unittest.TestCase):
         test_time_mux_res(self, analysis_instances[2:4])
         test_time_mux_res(self, analysis_instances[4:6])
 
+    def test_preserve_data_params(self):
+        dp1 = {
+            "n_bits_in": 14,
+            "n_bits_out": 10,
+            "n_ones_in": 3,
+            "n_ones_out": 3,
+            "n_samples": 40
+        }
+        dp2 = {
+            "n_bits_in": 8,
+            "n_bits_out": 16,
+            "n_ones_in": 2,
+            "n_ones_out": 4,
+            "n_samples": 50
+        }
+        net1 = NetworkBuilder(data_params=dp1)
+        net2 = NetworkBuilder(data_params=dp2)
+
+        pool = NetworkPool(net1.build())
+        pool.add_network(net2.build())
+
+        output = (stub_simulation(net1.mat_out, data_params=dp1) +
+                stub_simulation(net2.mat_out, data_params=dp2))
+
+        analysis_instances = pool.build_analysis(output)
+        self.assertEqual(len(analysis_instances), 2)
+        self.assertEqual(dp1, analysis_instances[0]["data_params"])
+        self.assertEqual(dp2, analysis_instances[1]["data_params"])
+
 
 class TestNetworkAnalysis(unittest.TestCase):
 
@@ -449,36 +504,152 @@ class TestNetworkAnalysis(unittest.TestCase):
             "input_times": [[1.0, 2.0], [3.0], [4.0, 5.0, 6.0]],
             "input_indices": [[0, 1], [2], [3, 4, 5]],
             "output_times": [[1.75, 2.5], [4.5, 4.75], [5.1, 5.2, 6.3], [6.4]],
-            "output_indices": [[0, 1], [3, 3], [4, 4, 5], [5]]
+            "output_indices": [[0, 1], [3, 3], [4, 4, 5], [5]],
+            "data_params": {
+                "n_bits_in": 3,
+                "n_bits_out": 4,
+                "n_ones_in": 1,
+                "n_ones_out": 1,
+                "n_samples": 6
+            }
         })
         latency = analysis.calculate_latencies()
         latency[latency == np.inf] = -1 # almost_equal and inf is buggy
         np.testing.assert_almost_equal([0.75, 0.5, -1, 0.75, 0.2, 0.4], latency)
 
+    def test_calculate_latencies(self):
+        dp1 = {
+            "n_bits_in": 14,
+            "n_bits_out": 10,
+            "n_ones_in": 3,
+            "n_ones_out": 3,
+            "n_samples": 40
+        }
+        dp2 = {
+            "n_bits_in": 8,
+            "n_bits_out": 16,
+            "n_ones_in": 2,
+            "n_ones_out": 4,
+            "n_samples": 50
+        }
+        net1 = NetworkBuilder(data_params=dp1)
+        net2 = NetworkBuilder(data_params=dp2)
+
+        pool = NetworkPool(net1.build())
+        pool.add_network(net2.build())
+
+        output = (stub_simulation(net1.mat_out, data_params=dp1, latency=20.0) +
+                stub_simulation(net2.mat_out, data_params=dp2, latency=30.0))
+
+        analysis_instances = pool.build_analysis(output)
+        np.testing.assert_almost_equal(
+                [20.0] * dp1["n_samples"],
+                analysis_instances[0].calculate_latencies())
+        np.testing.assert_almost_equal(
+                [30.0] * dp2["n_samples"],
+                analysis_instances[1].calculate_latencies())
+
     def test_calculate_output_matrix(self):
         analysis = NetworkAnalysis({
-            "input_times": [[0, 0], [0], [0, 0, 0]],
+            "input_times": [[0.0, 0.0], [0.0], [0.0, 0.0, 0.0]],
             "input_indices": [[0, 1], [2], [3, 4, 5]],
-            "output_times": [[0, 0, 0], [0, 0, 0], [0, 0], [0, 0, 0]],
-            "output_indices": [[0, 1, 1, 2], [0, 3, 2], [4, 4], [0, 1, 5]]
+            "output_times": [[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0],
+                    [0.0, 0.0, 0.0]],
+            "output_indices": [[0, 1, 1, 2], [0, 3, 2], [4, 4], [0, 1, 5]],
+            "data_params": {
+                "n_bits_in": 3,
+                "n_bits_out": 4,
+                "n_ones_in": 1,
+                "n_ones_out": 1,
+                "n_samples": 6
+            }
         })
 
-        mat_out = analysis.calculate_output_matrix(output_burst_size=2)
+        mat_out = analysis.calculate_output_matrix(
+                output_params={"burst_size": 2})
         np.testing.assert_almost_equal([
             [ 0.5,  0.5,  0.,   0.5],
             [ 1.,   0.,   0.,   0.5],
-            [ 0.,   0.5,  0.,   0. ],
+            [ 0.5,  0.5,  0.,   0. ],
             [ 0.,   0.5,  0.,   0. ],
             [ 0.,   0.,   1.,   0. ],
-            [ 0.,   0.,   0.,   0.5],], mat_out)
+            [ 0.,   0.,   0.,   0.5]], mat_out)
 
-        mat_out = analysis.calculate_output_matrix(topology_params={"multiplicity": 2},
-                output_burst_size=2)
+        analysis["topology_params"] = TopologyParameters({
+                "multiplicity": 2
+        })
+        analysis["data_params"]["n_bits_out"] = 2
+        mat_out = analysis.calculate_output_matrix(
+            output_params={"burst_size": 2})
         np.testing.assert_almost_equal([
-            [ 1.,  0.5],
-            [ 1.,  0.5],
-            [ 0.5, 0.],
-            [ 0.5, 0.],
-            [ 0.,  1.],
-            [ 0.,  0.5],], mat_out)
+            [ 0.5,  0.25],
+            [ 0.5,  0.25],
+            [ 0.5,  0.],
+            [ 0.25, 0.],
+            [ 0.,  0.5],
+            [ 0.,  0.25]], mat_out)
+
+    def test_calculate_output_matrix_stub_sim(self):
+        dp1 = {
+            "n_bits_in": 14,
+            "n_bits_out": 10,
+            "n_ones_in": 3,
+            "n_ones_out": 3,
+            "n_samples": 40
+        }
+        dp2 = {
+            "n_bits_in": 8,
+            "n_bits_out": 16,
+            "n_ones_in": 2,
+            "n_ones_out": 4,
+            "n_samples": 50
+        }
+        dp3 = {
+            "n_bits_in": 5,
+            "n_bits_out": 8,
+            "n_ones_in": 1,
+            "n_ones_out": 3,
+            "n_samples": 20
+        }
+        tp1 = {
+            "multiplicity": 1
+        }
+        tp2 = {
+            "multiplicity": 3
+        }
+        tp3 = {
+            "multiplicity": 2
+        }
+
+        # Build three networks
+        net1 = NetworkBuilder(data_params=dp1)
+        net2 = NetworkBuilder(data_params=dp2)
+        net3 = NetworkBuilder(data_params=dp3)
+
+        # Add them to a network pool
+        pool = NetworkPool()
+        pool.add_networks([
+                net1.build(topology_params=tp1),
+                net2.build(topology_params=tp2),
+                net3.build(topology_params=tp3)])
+
+        # Simulate some expected output
+        output = (
+                stub_simulation(net1.mat_out, data_params=dp1,
+                        topology_params=tp1, latency=20.0) +
+                stub_simulation(net2.mat_out, data_params=dp2,
+                        topology_params=tp2, latency=30.0) +
+                stub_simulation(net3.mat_out, data_params=dp3,
+                        topology_params=tp3, latency=10.0))
+
+        # Fetch the analysis instance for the output
+        analysis_instances = pool.build_analysis(output)
+
+        # Compare the output matrices
+        m1 = analysis_instances[0].calculate_output_matrix()
+        m2 = analysis_instances[1].calculate_output_matrix()
+        m3 = analysis_instances[2].calculate_output_matrix()
+        np.testing.assert_almost_equal(net1.mat_out, m1)
+        np.testing.assert_almost_equal(net2.mat_out, m2)
+        np.testing.assert_almost_equal(net3.mat_out, m3)
 

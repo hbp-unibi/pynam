@@ -30,18 +30,6 @@ import numpy as np
 import pynnless as pynl
 import pynnless.pynnless_utils as utils
 
-def rmax(xs):
-    """
-    Roboust max function, returns -Inf if xs is empty.
-    """
-    return -np.inf if len(xs) == 0 else max(xs)
-
-def rmin(xs):
-    """
-    Roboust min function, returns Inf if xs is empty.
-    """
-    return np.inf if len(xs) == 0 else min(xs)
-
 def initialize_seed(seed, seq=1):
     """
     Initializes the numpy random number generator seed with the given seed
@@ -85,7 +73,6 @@ class DataParameters(dict):
         utils.init_key(self, data, "n_ones_in", n_ones_in)
         utils.init_key(self, data, "n_ones_out", n_ones_out)
         utils.init_key(self, data, "n_samples", n_samples)
-
 
 class InputParameters(dict):
     """
@@ -148,6 +135,20 @@ class InputParameters(dict):
         res.sort()
         return res
 
+class OutputParameters(dict):
+    """
+    Contains parameters describing the expected output.
+    """
+
+    def __init__(self, data={}, burst_size=1):
+        """
+        Constructor of the OutputParameters class. Either copies the parameters
+        from the given "data" dictionary or uses the given arguments.
+
+        :param data: dictionary the arguments are preferably copied from.
+        :param burst_size: number of expected output spikes in a neuron.
+        """
+        utils.init_key(self, data, "burst_size", burst_size)
 
 class TopologyParameters(dict):
     """
@@ -322,30 +323,33 @@ class NetworkBuilder:
                         for k in xrange(s) for l in xrange(s)])
         return net
 
-    def build_input(self, k=-1, time_offs=0, topology_params={},
+    @staticmethod
+    def build_spike_trains(mat, k=-1, time_offs=0, topology_params={},
             input_params={}, input_params_delay=10):
         """
-        Builds the input spike trains for the network with the given input
-        parameter sets. Returns a list with spike times for each neuron as first
-        return value and a similar list containing the sample index for each
-        spike time. Note that input_params may be an array of parameter sets --
-        in this case multiple input spike trains are created.
+        Builds a list of spike trains as encoded in the given matrix, consisting
+        of one sample per row.
         """
 
+        def rmin(xs):
+            """
+            Roboust min function, returns Inf if xs is empty.
+            """
+            return np.inf if len(xs) == 0 else min(xs)
+
         # Fetch the data parameters for convenient access
-        N = self.data_params["n_samples"]
-        m = self.data_params["n_bits_in"]
-        n = self.data_params["n_bits_out"]
+        N = mat.shape[0]
+        m = mat.shape[1]
 
         # If k is smaller than zero, use the number of samples instead
         if k < 0 or k > N:
             k = N
 
-        # Make sure mat_in is a numpy array
-        if isinstance(self.mat_in, binam.BinaryMatrix):
-            X = self.mat_in.get()
+        # Make sure mat is a numpy array
+        if isinstance(mat, binam.BinaryMatrix):
+            X = mat.get()
         else:
-            X = np.array(self.mat_in, dtype=np.uint8)
+            X = np.array(mat, dtype=np.uint8)
 
         # Make sure input_params is a list
         if not isinstance(input_params, list):
@@ -382,12 +386,25 @@ class NetworkBuilder:
 
         # Offset the first spike time to time_offs
         min_t = min(map(rmin, input_times))
-        input_times = map(lambda ts: map(lambda t: t - min_t, ts), input_times)
+        input_times = map(lambda ts: map(lambda t: t - min_t + time_offs, ts),
+                input_times)
 
         # Store the sample indices at which new input parameter sets start
         input_split = range(k, k * (len(input_params) + 1), k)
 
         return input_times, input_indices, input_split
+
+    def build_input(self, k=-1, time_offs=0, topology_params={},
+            input_params={}, input_params_delay=10):
+        """
+        Builds the input spike trains for the network with the given input
+        parameter sets. Returns a list with spike times for each neuron as first
+        return value and a similar list containing the sample index for each
+        spike time. Note that input_params may be an array of parameter sets --
+        in this case multiple input spike trains are created.
+        """
+        return self.build_spike_trains(self.mat_in, k, time_offs,
+                topology_params, input_params, input_params_delay)
 
     def inject_input(self, topology, times):
         """
@@ -414,10 +431,11 @@ class NetworkBuilder:
                 input_params=input_params)
         return NetworkInstance(
                 self.inject_input(topology, input_times),
-                input_times=input_times,
-                input_indices=input_indices,
-                input_split=input_split,
-                data_params = DataParameters(self.data_params, n_samples=k))
+                input_times = input_times,
+                input_indices = input_indices,
+                input_split = input_split,
+                data_params = DataParameters(self.data_params, n_samples=k),
+                topology_params = topology_params)
 
 class NetworkInstance(dict):
     """
@@ -428,13 +446,18 @@ class NetworkInstance(dict):
     """
 
     def __init__(self, data={}, populations=[], connections=[],
-            input_times=[], input_indices=[], input_split=[], data_params={}):
+            input_times=[], input_indices=[], input_split=[], data_params={},
+            topology_params={}):
         utils.init_key(self, data, "populations", populations)
         utils.init_key(self, data, "connections", connections)
         utils.init_key(self, data, "input_times", input_times)
         utils.init_key(self, data, "input_indices", input_indices)
         utils.init_key(self, data, "input_split", input_split)
-        utils.init_key(self, data, "data_params", DataParameters(data_params))
+        utils.init_key(self, data, "data_params", data_params)
+        utils.init_key(self, data, "topology_params", topology_params)
+
+        self["data_params"] = DataParameters(self["data_params"])
+        self["topology_params"] = TopologyParameters(self["topology_params"])
 
     @staticmethod
     def flaten(times, indices, sort_by_sample=False):
@@ -524,8 +547,8 @@ class NetworkInstance(dict):
         return times_part, indices_part
 
     @staticmethod
-    def build_analysis_static(input_times, input_indices, output,
-            input_split=[]):
+    def build_analysis_static(input_times, input_indices, output, data_params,
+            topology_params, input_split=[]):
         # Fetch the output times and output indices
         output_times, output_indices = NetworkInstance.match_static(input_times,
                 input_indices, output)
@@ -544,16 +567,19 @@ class NetworkInstance(dict):
             output_times_part, output_indices_part = NetworkInstance.split(
                     output_times, output_indices, k0, k)
             res.append(NetworkAnalysis(
-                    input_times=input_times_part,
-                    input_indices=input_indices_part,
-                    output_times=output_times_part,
-                    output_indices=output_indices_part))
+                    input_times = input_times_part,
+                    input_indices = input_indices_part,
+                    output_times = output_times_part,
+                    output_indices = output_indices_part,
+                    data_params = data_params,
+                    topology_params = topology_params))
             k0 = k
         return res
 
     def build_analysis(self, output):
         return self.build_analysis_static(self["input_times"],
-                self["input_indices"], output, self["input_split"])
+                self["input_indices"], output, self["data_params"],
+                self["topology_params"], self["input_split"])
 
 class NetworkPool(dict):
     """
@@ -564,17 +590,22 @@ class NetworkPool(dict):
     """
 
     def __init__(self, data={}, populations=[], connections=[],
-            input_times=[], input_indices=[], input_split=[], spatial_split=[]):
+            input_times=[], input_indices=[], input_split=[], spatial_split=[],
+            data_params=[], topology_params=[]):
         utils.init_key(self, data, "populations", populations)
         utils.init_key(self, data, "connections", connections)
         utils.init_key(self, data, "input_times", input_times)
         utils.init_key(self, data, "input_indices", input_indices)
         utils.init_key(self, data, "input_split", input_split)
         utils.init_key(self, data, "spatial_split", spatial_split)
+        utils.init_key(self, data, "data_params", data_params)
+        utils.init_key(self, data, "topology_params", topology_params)
 
         # Fix things up in case a NetworkInstance was passed to the constructor
         if (len(self["spatial_split"]) == 0 and len(self["populations"]) > 0):
             self["input_split"] = [self["input_split"]]
+            self["data_params"] = [self["data_params"]]
+            self["topology_params"] = [self["topology_params"]]
             self["spatial_split"].append({
                     "population": len(self["populations"]),
                     "input": len(self["input_times"])
@@ -595,6 +626,8 @@ class NetworkPool(dict):
         self["input_times"] = self["input_times"] + network["input_times"]
         self["input_indices"] = self["input_indices"] + network["input_indices"]
         self["input_split"].append(network["input_split"])
+        self["data_params"].append(network["data_params"])
+        self["topology_params"].append(network["topology_params"])
 
         # Add a "spatial_split" -- this allows to dissect the network into its
         # original parts after the result is available
@@ -643,10 +676,19 @@ class NetworkPool(dict):
                     isinstance(self["input_split"][i], list)):
                 input_split = self["input_split"][i]
 
+            # Fetch the i-th "data_params" and "topology_params" instance
+            data_params = self["data_params"][i]
+            topology_params = self["topology_params"][i]
+
             # Let the NetworkInstance class build the analysis instances. This
             # class is responsible for performing the temporal demultiplexing.
-            res = res + NetworkInstance.build_analysis_static(input_times,
-                input_indices, output_part, input_split)
+            res = res + NetworkInstance.build_analysis_static(
+                input_times = input_times,
+                input_indices = input_indices,
+                output = output_part,
+                data_params = data_params,
+                topology_params = topology_params,
+                input_split = input_split)
             last_split = split
         return res
 
@@ -657,11 +699,17 @@ class NetworkAnalysis(dict):
     """
 
     def __init__(self, data={}, input_times=[], input_indices=[],
-            output_times=[], output_indices=[]):
+            output_times=[], output_indices=[], data_params={},
+            topology_params={}):
         utils.init_key(self, data, "input_times", input_times)
         utils.init_key(self, data, "input_indices", input_indices)
         utils.init_key(self, data, "output_times", output_times)
         utils.init_key(self, data, "output_indices", output_indices)
+        utils.init_key(self, data, "data_params", data_params)
+        utils.init_key(self, data, "topology_params", topology_params)
+
+        self["data_params"] = DataParameters(self["data_params"])
+        self["topology_params"] = TopologyParameters(self["topology_params"])
 
     def calculate_latencies(self):
         """
@@ -677,7 +725,7 @@ class NetworkAnalysis(dict):
                 self["output_indices"], sort_by_sample=True)
 
         # Fetch the number of samples
-        N = np.max(kIn) + 1
+        N = self["data_params"]["n_samples"]
         res = np.zeros(N)
 
         # Calculate the latency for each sample
@@ -694,8 +742,7 @@ class NetworkAnalysis(dict):
                 res[k] = tOut[iOutK] - tIn[iInK]
         return res
 
-    def calculate_output_matrix(self, topology_params={},
-            output_burst_size = 1):
+    def calculate_output_matrix(self, output_params={}):
         """
         Calculates a matrix containing the actually calculated output samples.
         """
@@ -705,11 +752,11 @@ class NetworkAnalysis(dict):
                 self["output_indices"], sort_by_sample=True)
 
         # Fetch the neuron multiplicity
-        s = TopologyParameters(topology_params)["multiplicity"]
+        s = self["topology_params"]["multiplicity"]
 
         # Create the output matrix
-        N = max(map(rmax, self["input_indices"])) + 1
-        n = len(self["output_indices"]) // s
+        N = self["data_params"]["n_samples"]
+        n = self["data_params"]["n_bits_out"]
         res = np.zeros((N, n))
 
         # Iterate over each sample
@@ -724,18 +771,16 @@ class NetworkAnalysis(dict):
                 res[k, nOut[i] // s] = res[k, nOut[i] // s] + 1
 
         # Scale the result matrix according to the output_burst_size
-        return res / float(output_burst_size)
+        return res / float(s * OutputParameters(output_params)["burst_size"])
 
     def calculate_storage_capactiy(self, mat_out_expected, n_out_ones,
-            topology_params = {}, output_burst_size = 1):
+            output_params={}):
         """
         Calculates the storage capacity of the BiNAM, given the expected output
         data and number of ones in the output. Returns the information, the
         output matrix and the error counts.
         """
-        mat_out = self.calculate_output_matrix(
-                topology_params=topology_params,
-                output_burst_size=output_burst_size)
+        mat_out = self.calculate_output_matrix(output_params)
         N, n = mat_out.shape
         errs = binam_utils.calculate_errs(mat_out, mat_out_expected)
         I = binam_utils.entropy_hetero(errs, n, n_out_ones)
