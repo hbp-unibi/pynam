@@ -23,6 +23,7 @@ a spiking neural network.
 
 import binam
 import binam_utils
+import binam_data
 import bisect
 import itertools
 import numpy as np
@@ -40,6 +41,27 @@ def rmin(xs):
     Roboust min function, returns Inf if xs is empty.
     """
     return np.inf if len(xs) == 0 else min(xs)
+
+def initialize_seed(seed):
+    """
+    Initializes the numpy random number generator seed with the given seed
+    value. The seed value may be None, in which case no changes the the numpy
+    seed are made. Returns the old random generator state or None if no change
+    was made.
+    """
+    if seed is None:
+        return None
+    old_state = np.random.get_state()
+    np.random.seed(seed)
+    return old_state
+
+def finalize_seed(old_state):
+    """
+    Restores the numpy random seed to its old value, or does nothin if the given
+    value is "None".
+    """
+    if (old_state != None):
+        np.random.set_state(old_state)
 
 class DataParameters(dict):
     """
@@ -202,10 +224,28 @@ class NetworkBuilder:
 
         # Make sure that either data parameters are given or an input
         # and output matrix
-        assert((mat_in == None) == (mat_out == None))
-        assert((mat_in == None) != (data_params == None))
+        assert((mat_in is None) == (mat_out is None))
+        assert((mat_in is None) != (data_params is None))
 
-        if mat_in != None:
+        if mat_in is None:
+            # Use the supplied data parameters -- generate the data matrices
+            self.data_params = DataParameters(data_params)
+
+            # Set the random number generator seed and generate the data
+            old_seed = initialize_seed(seed)
+            try:
+                self.mat_in = binam_data.generate(
+                    n_bits = self.data_params["n_bits_in"],
+                    n_ones = self.data_params["n_ones_in"],
+                    n_samples = self.data_params["n_samples"])
+                self.mat_out = binam_data.generate(
+                    n_bits = self.data_params["n_bits_out"],
+                    n_ones = self.data_params["n_ones_out"],
+                    n_samples = self.data_params["n_samples"])
+            finally:
+                finalize_seed(old_seed)
+
+        else:
             # If a matrices are given, derive the data parameters from those
             self.mat_in = mat_in
             self.mat_out = mat_out
@@ -216,11 +256,7 @@ class NetworkBuilder:
                 n_bits_out = mat_out.shape[1],
                 n_ones_in = self._n_ones(mat_in),
                 n_ones_out = self._n_ones(mat_out),
-                n_samples = mat_in.shape[0]
-            )
-        else:
-            # The use supplied data parameters -- generate the data matrices
-            self.data_params = DataParameters(data_params)
+                n_samples = mat_in.shape[0])
 
     def build_topology(self, k=-1, seed=None, topology_params={}):
         """
