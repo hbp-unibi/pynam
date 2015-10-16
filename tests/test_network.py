@@ -170,6 +170,17 @@ class TestNetworkBuilder(unittest.TestCase):
         self.assertEqual(5, net2.data_params["n_ones_out"])
         self.assertEqual(20, net2.data_params["n_samples"])
 
+    def test_auto_sample_count(self):
+        net = NetworkBuilder(data_params={
+            "n_bits_in": 16,
+            "n_bits_out": 16,
+            "n_ones_in": 2,
+            "n_ones_out": 2
+        })
+        self.assertEqual(52, net.data_params["n_samples"])
+        self.assertEqual(52, net.mat_in.shape[0])
+        self.assertEqual(52, net.mat_out.shape[0])
+
     def test_init_data_seed(self):
         net1 = NetworkBuilder(data_params={
             "n_bits_in": 8,
