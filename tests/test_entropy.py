@@ -21,7 +21,7 @@ import unittest
 import numpy as np
 import numpy.testing
 from pynam.entropy import ncr, entropy_hetero, entropy_hetero_uniform,\
-        expected_false_positives, calculate_errs
+        expected_false_positives, calculate_errs, optimal_sample_count\
 
 class TestUtils(unittest.TestCase):
 
@@ -106,3 +106,8 @@ class TestUtils(unittest.TestCase):
         errs = calculate_errs(mat_out, mat_out_expected)
         self.assertAlmostEqual([{'fp': 0.25, 'fn': 0.8},
                 {'fp': 1.25, 'fn': 0}, {'fp': 0.1, 'fn': 0}], errs)
+
+    def test_optimal_sample_count(self):
+        self.assertEqual(52, optimal_sample_count(16, 16, 2, 2))
+        self.assertEqual(62, optimal_sample_count(32, 32, 4, 4))
+
