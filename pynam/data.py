@@ -22,7 +22,7 @@ Contains a "generate" function which generates a set of training vectors that
 can be used to train a BiNAM.
 """
 
-import binam_utils as utils
+import entropy
 import numpy as np
 
 #
@@ -62,7 +62,7 @@ class PermutationTrieNode:
         """
         self.idx = idx;
         max_val = np.iinfo(np.uint64).max
-        self.max_permutations = np.fromiter((min(utils.ncr(i, remaining - 1),
+        self.max_permutations = np.fromiter((min(entropy.ncr(i, remaining - 1),
                 max_val) for i in xrange(idx)), dtype=np.uint64, count=idx)
         self.permutations = self.max_permutations.copy()
         self.children = {}

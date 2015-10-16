@@ -22,8 +22,8 @@ a spiking neural network.
 """
 
 import binam
-import binam_utils
-import binam_data
+import entropy
+import data
 import bisect
 import itertools
 import numpy as np
@@ -244,7 +244,7 @@ class NetworkBuilder:
             # Set the random number generator seed and generate the data
             old_seed = initialize_seed(seed, 1)
             try:
-                self.mat_in = binam_data.generate(
+                self.mat_in = data.generate(
                     n_bits = self.data_params["n_bits_in"],
                     n_ones = self.data_params["n_ones_in"],
                     n_samples = self.data_params["n_samples"])
@@ -255,7 +255,7 @@ class NetworkBuilder:
             # n_samples are always the same
             old_seed = initialize_seed(seed, 2)
             try:
-                self.mat_out = binam_data.generate(
+                self.mat_out = data.generate(
                     n_bits = self.data_params["n_bits_out"],
                     n_ones = self.data_params["n_ones_out"],
                     n_samples = self.data_params["n_samples"])
@@ -773,8 +773,7 @@ class NetworkAnalysis(dict):
         # Scale the result matrix according to the output_burst_size
         return res / float(s * OutputParameters(output_params)["burst_size"])
 
-    def calculate_storage_capactiy(self, mat_out_expected, n_out_ones,
-            output_params={}):
+    def calculate_storage_capactiy(self, mat_out_expected, output_params={}):
         """
         Calculates the storage capacity of the BiNAM, given the expected output
         data and number of ones in the output. Returns the information, the
@@ -782,6 +781,7 @@ class NetworkAnalysis(dict):
         """
         mat_out = self.calculate_output_matrix(output_params)
         N, n = mat_out.shape
-        errs = binam_utils.calculate_errs(mat_out, mat_out_expected)
-        I = binam_utils.entropy_hetero(errs, n, n_out_ones)
+        errs = entropy.calculate_errs(mat_out, mat_out_expected)
+        I = entropy.entropy_hetero(errs, n, self["data_params"]["n_ones_out"])
         return I, mat_out, errs
+

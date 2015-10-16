@@ -20,7 +20,7 @@ import unittest
 
 import numpy as np
 import numpy.testing
-from pynam.binam_data import PermutationTrieNode, generate
+from pynam.data import PermutationTrieNode, generate
 
 class TestPermutationTrieNode(unittest.TestCase):
     def test_ctor(self):

@@ -22,7 +22,7 @@ import numpy as np
 import numpy.testing
 
 from pynam.binam import BinaryMatrix
-from pynam.binam_network import (
+from pynam.network import (
         InputParameters,
         TopologyParameters,
         NetworkBuilder,

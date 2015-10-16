@@ -20,7 +20,7 @@ import unittest
 
 import numpy as np
 import numpy.testing
-from pynam.binam_utils import ncr, entropy_hetero, entropy_hetero_uniform,\
+from pynam.entropy import ncr, entropy_hetero, entropy_hetero_uniform,\
         expected_false_positives, calculate_errs
 
 class TestUtils(unittest.TestCase):

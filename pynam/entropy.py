@@ -17,8 +17,8 @@
 #   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Contains utility functions to be used in conjunction with the BiNAM
-implementation.
+Contains utility functions used to calculate the entropy/storage capacity of
+a BiNAM network.
 """
 
 import numpy as np

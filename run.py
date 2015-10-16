@@ -41,7 +41,7 @@
 
 import numpy as np
 import pynam
-import pynam.binam_utils
+import pynam.entropy
 import pynnless as pynl
 import scipy.io as scio
 import sys
@@ -84,8 +84,8 @@ mat_out_expected = pynam.generate(n_bits=n, n_ones=d, n_samples=N)
 binam = pynam.BiNAM(m, n)
 binam.train_matrix(mat_in, mat_out_expected)
 mat_out_ref = binam.evaluate_matrix(mat_in)
-errs_ref = pynam.binam_utils.calculate_errs(mat_out_ref, mat_out_expected)
-I_ref = pynam.binam_utils.entropy_hetero(errs_ref, n, d)
+errs_ref = pynam.entropy.calculate_errs(mat_out_ref, mat_out_expected)
+I_ref = pynam.entropy.entropy_hetero(errs_ref, n, d)
 
 # Build the network and the metadata
 print "Build network..."
@@ -101,8 +101,7 @@ output = sim.run(net)
 # Fetch the output times and output indices from the output data
 print "Analyze result..."
 analysis = net.build_analysis(output)[0]
-I, mat_out, errs = analysis.calculate_storage_capactiy(mat_out_expected, d,
-        topology_params=topology_params)
+I, mat_out, errs = analysis.calculate_storage_capactiy(mat_out_expected)
 latency = analysis.calculate_latencies()
 
 print "INFORMATION: ", I, " of a theoretical ", I_ref
