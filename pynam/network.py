@@ -216,12 +216,6 @@ class NetworkBuilder:
     # Data parameters
     data_params = None
 
-    # Internally cached BiNAM instance
-    mem = None
-
-    # Last sample until which the BiNAM has been trained
-    last_k = 0
-
     @staticmethod
     def _n_ones(mat):
         m, n = mat.shape
@@ -284,7 +278,7 @@ class NetworkBuilder:
                 n_ones_out = self._n_ones(mat_out),
                 n_samples = mat_in.shape[0])
 
-    def build_topology(self, k=-1, seed=None, topology_params={}):
+    def build_topology(self, seed=None, topology_params={}):
         """
         Builds a network for a BiNAM that has been trained up to the k'th sample
         """
@@ -294,16 +288,11 @@ class NetworkBuilder:
         m = self.data_params["n_bits_in"]
         n = self.data_params["n_bits_out"]
 
-        # If k is smaller than zero, use the number of samples instead
-        if k < 0 or k > N:
-            k = N
 
-        # Train the BiNAM from the last trained sample last_k up to k
-        if self.mem == None or self.last_k > k:
-            self.mem = binam.BiNAM(m, n)
-        for l in xrange(self.last_k, k):
-            self.mem.train(self.mat_in[l], self.mat_out[l])
-        self.last_k = k
+        # Train the BiNAM
+        mem = binam.BiNAM(m, n)
+        for k in xrange(0, N):
+            mem.train(self.mat_in[k], self.mat_out[k])
 
         # Build input and output neurons
         t = TopologyParameters(topology_params)
@@ -326,14 +315,14 @@ class NetworkBuilder:
         # Add all connections
         for i in xrange(m):
             for j in xrange(n):
-                if self.mem[i, j] != 0:
+                if mem[i, j] != 0:
                     net.add_connections([
                         (in_coord(i, k), out_coord(j, l), t.draw_weight(), 0.0)
                         for k in xrange(s) for l in xrange(s)])
         return net
 
     @staticmethod
-    def build_spike_trains(mat, k=-1, time_offs=0, topology_params={},
+    def build_spike_trains(mat, time_offs=0, topology_params={},
             input_params={}, input_params_delay=10):
         """
         Builds a list of spike trains as encoded in the given matrix, consisting
@@ -349,10 +338,6 @@ class NetworkBuilder:
         # Fetch the data parameters for convenient access
         N = mat.shape[0]
         m = mat.shape[1]
-
-        # If k is smaller than zero, use the number of samples instead
-        if k < 0 or k > N:
-            k = N
 
         # Make sure mat is a numpy array
         if isinstance(mat, binam.BinaryMatrix):
@@ -381,7 +366,7 @@ class NetworkBuilder:
 
             # Calculate the maximum number of spikes, create two two-dimensional
             # matrix which contain the spike times and the sample indics
-            for l in xrange(k):
+            for l in xrange(N):
                 for i in xrange(m):
                     for j in xrange(s):
                         train = p.build_spike_train(value=X[l, i], offs=t)
@@ -399,11 +384,11 @@ class NetworkBuilder:
                 input_times)
 
         # Store the sample indices at which new input parameter sets start
-        input_split = range(k, k * (len(input_params) + 1), k)
+        input_split = range(N, N * (len(input_params) + 1), N)
 
         return input_times, input_indices, input_split
 
-    def build_input(self, k=-1, time_offs=0, topology_params={},
+    def build_input(self, time_offs=0, topology_params={},
             input_params={}, input_params_delay=10):
         """
         Builds the input spike trains for the network with the given input
@@ -412,7 +397,7 @@ class NetworkBuilder:
         spike time. Note that input_params may be an array of parameter sets --
         in this case multiple input spike trains are created.
         """
-        return self.build_spike_trains(self.mat_in, k, time_offs,
+        return self.build_spike_trains(self.mat_in, time_offs,
                 topology_params, input_params, input_params_delay)
 
     def inject_input(self, topology, times):
@@ -423,18 +408,14 @@ class NetworkBuilder:
             topology["populations"][i]["params"]["spike_times"] = times[i]
         return topology
 
-    def build(self, k=-1, time_offs=0, topology_params={}, input_params={}):
+    def build(self, time_offs=0, topology_params={}, input_params={}):
         """
         Builds a network with the given topology and input data that is ready
         to be handed of to PyNNLess.
         """
 
-        # If k is smaller than zero, use the number of samples instead
-        if k < 0 or k > N:
-            k = self.data_params["n_samples"]
-
-        topology = self.build_topology(k, topology_params=topology_params)
-        input_times, input_indices, input_split = self.build_input(k,
+        topology = self.build_topology(topology_params=topology_params)
+        input_times, input_indices, input_split = self.build_input(
                 time_offs=time_offs,
                 topology_params=topology_params,
                 input_params=input_params)
@@ -443,7 +424,7 @@ class NetworkBuilder:
                 input_times = input_times,
                 input_indices = input_indices,
                 input_split = input_split,
-                data_params = DataParameters(self.data_params, n_samples=k),
+                data_params = self.data_params,
                 topology_params = topology_params)
 
 class NetworkInstance(dict):
