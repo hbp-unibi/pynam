@@ -52,14 +52,16 @@ if (len(sys.argv) != 2):
 
 # Generate test data
 print "Generate test data..."
-m = 8
-n = 8
-c = 3
-d = 3
-N = 10
+
+data_params = {
+    "n_bits_in": 32,
+    "n_bits_out": 32,
+    "n_ones_in": 3,
+    "n_ones_out": 3
+}
 
 topology_params = {
-    "w": 0.004,
+    "w": 0.011,
     "params": {
         "cm": 0.2,
         "e_rev_E": -40,
@@ -67,8 +69,8 @@ topology_params = {
         "v_rest": -50,
         "v_reset": -70,
         "v_thresh": -47,
-        "tau_m": 409.0,
-        "tau_refrac": 20.0
+#        "tau_m": 409.0,
+#        "tau_refrac": 20.0
     }
 }
 
@@ -77,19 +79,9 @@ input_params = {
     "sigma_t": 5.0
 }
 
-mat_in = pynam.generate(n_bits=m, n_ones=c, n_samples=N)
-mat_out_expected = pynam.generate(n_bits=n, n_ones=d, n_samples=N)
-
-# Train a reference binam
-binam = pynam.BiNAM(m, n)
-binam.train_matrix(mat_in, mat_out_expected)
-mat_out_ref = binam.evaluate_matrix(mat_in)
-errs_ref = pynam.entropy.calculate_errs(mat_out_ref, mat_out_expected)
-I_ref = pynam.entropy.entropy_hetero(errs_ref, n, d)
-
 # Build the network and the metadata
 print "Build network..."
-builder = pynam.NetworkBuilder(mat_in, mat_out_expected)
+builder = pynam.NetworkBuilder(data_params=data_params)
 net = builder.build(topology_params=topology_params, input_params=input_params)
 
 # Run the simulation
@@ -101,32 +93,16 @@ output = sim.run(net)
 # Fetch the output times and output indices from the output data
 print "Analyze result..."
 analysis = net.build_analysis(output)[0]
-I, mat_out, errs = analysis.calculate_storage_capactiy(mat_out_expected)
+I, mat_out, errs = analysis.calculate_storage_capactiy()
+I_ref, mat_out_ref, errs_ref = analysis.calculate_max_storage_capacity()
 latency = analysis.calculate_latencies()
 
+print "SAMPLES: ", analysis["data_params"]["n_samples"]
 print "INFORMATION: ", I, " of a theoretical ", I_ref
-print "MAT OUT:\n", mat_out
+print "MAT OUT:\n", np.array(mat_out, dtype=np.uint8)
 print "MAT OUT (reference):\n", mat_out_ref
-print "MAT OUT EXPECTED:\n", mat_out_expected
+print "MAT OUT EXPECTED:\n", analysis["mat_out"]
 print "AVG. LATENCY:\n", np.mean(latency)
 print "LATENCIES:\n", latency
 
-scio.savemat("res.mat", {
-    "mat_in": mat_in,
-    "mat_out_expected": mat_out,
-    "mat_out_ref": mat_out_ref,
-    "mat_out": mat_out,
-    "errs": errs,
-    "errs_ref": errs_ref,
-    "I": I,
-    "I_ref": I_ref,
-    "latency": latency,
-    "topology_params": topology_params,
-    "input_params": input_params,
-    "m": m,
-    "n": n,
-    "c": c,
-    "d": d,
-    "N": N
-})
 

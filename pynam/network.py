@@ -288,7 +288,6 @@ class NetworkBuilder:
         m = self.data_params["n_bits_in"]
         n = self.data_params["n_bits_out"]
 
-
         # Train the BiNAM
         mem = binam.BiNAM(m, n)
         for k in xrange(0, N):
@@ -425,7 +424,9 @@ class NetworkBuilder:
                 input_indices = input_indices,
                 input_split = input_split,
                 data_params = self.data_params,
-                topology_params = topology_params)
+                topology_params = topology_params,
+                mat_in = self.mat_in,
+                mat_out = self.mat_out)
 
 class NetworkInstance(dict):
     """
@@ -437,7 +438,7 @@ class NetworkInstance(dict):
 
     def __init__(self, data={}, populations=[], connections=[],
             input_times=[], input_indices=[], input_split=[], data_params={},
-            topology_params={}):
+            topology_params={}, mat_in=[], mat_out=[]):
         utils.init_key(self, data, "populations", populations)
         utils.init_key(self, data, "connections", connections)
         utils.init_key(self, data, "input_times", input_times)
@@ -445,6 +446,8 @@ class NetworkInstance(dict):
         utils.init_key(self, data, "input_split", input_split)
         utils.init_key(self, data, "data_params", data_params)
         utils.init_key(self, data, "topology_params", topology_params)
+        utils.init_key(self, data, "mat_in", mat_in)
+        utils.init_key(self, data, "mat_out", mat_out)
 
         self["data_params"] = DataParameters(self["data_params"])
         self["topology_params"] = TopologyParameters(self["topology_params"])
@@ -538,7 +541,7 @@ class NetworkInstance(dict):
 
     @staticmethod
     def build_analysis_static(input_times, input_indices, output, data_params,
-            topology_params, input_split=[]):
+            topology_params, mat_in, mat_out, input_split=[]):
         # Fetch the output times and output indices
         output_times, output_indices = NetworkInstance.match_static(input_times,
                 input_indices, output)
@@ -562,14 +565,17 @@ class NetworkInstance(dict):
                     output_times = output_times_part,
                     output_indices = output_indices_part,
                     data_params = data_params,
-                    topology_params = topology_params))
+                    topology_params = topology_params,
+                    mat_in = mat_in,
+                    mat_out = mat_out))
             k0 = k
         return res
 
     def build_analysis(self, output):
         return self.build_analysis_static(self["input_times"],
                 self["input_indices"], output, self["data_params"],
-                self["topology_params"], self["input_split"])
+                self["topology_params"], self["mat_in"], self["mat_out"],
+                self["input_split"])
 
 class NetworkPool(dict):
     """
@@ -579,9 +585,10 @@ class NetworkPool(dict):
     NetworkAnalysis object for each time/spatial multiplex.
     """
 
-    def __init__(self, data={}, populations=[], connections=[],
+    def __init__(self, data={}, name="", populations=[], connections=[],
             input_times=[], input_indices=[], input_split=[], spatial_split=[],
-            data_params=[], topology_params=[]):
+            data_params=[], topology_params=[], mat_in=[], mat_out=[]):
+        utils.init_key(self, data, "name", name)
         utils.init_key(self, data, "populations", populations)
         utils.init_key(self, data, "connections", connections)
         utils.init_key(self, data, "input_times", input_times)
@@ -590,12 +597,16 @@ class NetworkPool(dict):
         utils.init_key(self, data, "spatial_split", spatial_split)
         utils.init_key(self, data, "data_params", data_params)
         utils.init_key(self, data, "topology_params", topology_params)
+        utils.init_key(self, data, "mat_in", mat_in)
+        utils.init_key(self, data, "mat_out", mat_out)
 
         # Fix things up in case a NetworkInstance was passed to the constructor
         if (len(self["spatial_split"]) == 0 and len(self["populations"]) > 0):
             self["input_split"] = [self["input_split"]]
             self["data_params"] = [self["data_params"]]
             self["topology_params"] = [self["topology_params"]]
+            self["mat_in"] = [self["mat_in"]]
+            self["mat_out"] = [self["mat_out"]]
             self["spatial_split"].append({
                     "population": len(self["populations"]),
                     "input": len(self["input_times"])
@@ -618,6 +629,8 @@ class NetworkPool(dict):
         self["input_split"].append(network["input_split"])
         self["data_params"].append(network["data_params"])
         self["topology_params"].append(network["topology_params"])
+        self["mat_in"].append(network["mat_in"])
+        self["mat_out"].append(network["mat_out"])
 
         # Add a "spatial_split" -- this allows to dissect the network into its
         # original parts after the result is available
@@ -669,6 +682,8 @@ class NetworkPool(dict):
             # Fetch the i-th "data_params" and "topology_params" instance
             data_params = self["data_params"][i]
             topology_params = self["topology_params"][i]
+            mat_in = self["mat_in"][i]
+            mat_out = self["mat_out"][i]
 
             # Let the NetworkInstance class build the analysis instances. This
             # class is responsible for performing the temporal demultiplexing.
@@ -678,6 +693,8 @@ class NetworkPool(dict):
                 output = output_part,
                 data_params = data_params,
                 topology_params = topology_params,
+                mat_in = mat_in,
+                mat_out = mat_out,
                 input_split = input_split)
             last_split = split
         return res
@@ -690,13 +707,15 @@ class NetworkAnalysis(dict):
 
     def __init__(self, data={}, input_times=[], input_indices=[],
             output_times=[], output_indices=[], data_params={},
-            topology_params={}):
+            topology_params={}, mat_in=[], mat_out=[]):
         utils.init_key(self, data, "input_times", input_times)
         utils.init_key(self, data, "input_indices", input_indices)
         utils.init_key(self, data, "output_times", output_times)
         utils.init_key(self, data, "output_indices", output_indices)
         utils.init_key(self, data, "data_params", data_params)
         utils.init_key(self, data, "topology_params", topology_params)
+        utils.init_key(self, data, "mat_in", mat_in)
+        utils.init_key(self, data, "mat_out", mat_out)
 
         self["data_params"] = DataParameters(self["data_params"])
         self["topology_params"] = TopologyParameters(self["topology_params"])
@@ -763,15 +782,31 @@ class NetworkAnalysis(dict):
         # Scale the result matrix according to the output_burst_size
         return res / float(s * OutputParameters(output_params)["burst_size"])
 
-    def calculate_storage_capactiy(self, mat_out_expected, output_params={}):
+    def calculate_max_storage_capacity(self):
+        """
+        Calculates the maximum theoretical storage capacity for this network.
+        """
+        mem = binam.BiNAM(
+                self["data_params"]["n_bits_in"],
+                self["data_params"]["n_bits_out"])
+        mem.train_matrix(self["mat_in"], self["mat_out"])
+        mat_out_ref = mem.evaluate_matrix(self["mat_in"])
+
+        N, n = mat_out_ref.shape
+        errs_ref = entropy.calculate_errs(mat_out_ref, self["mat_out"])
+        I_ref = entropy.entropy_hetero(errs_ref, n,
+                self["data_params"]["n_ones_out"])
+        return I_ref, mat_out_ref, errs_ref
+
+    def calculate_storage_capactiy(self, output_params={}):
         """
         Calculates the storage capacity of the BiNAM, given the expected output
         data and number of ones in the output. Returns the information, the
         output matrix and the error counts.
         """
-        mat_out = self.calculate_output_matrix(output_params)
-        N, n = mat_out.shape
-        errs = entropy.calculate_errs(mat_out, mat_out_expected)
+        mat_out_res = self.calculate_output_matrix(output_params)
+        N, n = mat_out_res.shape
+        errs = entropy.calculate_errs(mat_out_res, self["mat_out"])
         I = entropy.entropy_hetero(errs, n, self["data_params"]["n_ones_out"])
-        return I, mat_out, errs
+        return I, mat_out_res, errs
 
