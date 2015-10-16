@@ -58,7 +58,7 @@ class DataParameters(dict):
     """
 
     def __init__(self, data={}, n_bits_in=16, n_bits_out=16, n_ones_in=3,
-            n_ones_out=3, n_samples = 100):
+            n_ones_out=3, n_samples = -1):
         """
         Fills the network structure with the given parameters.
 
@@ -66,13 +66,22 @@ class DataParameters(dict):
         :param n_bits_out: number of output bits.
         :param n_ones_in: number of ones in the input per sample.
         :param n_ones_out: number of ones in the output per sample.
-        :param n_samples: number of samples.
+        :param n_samples: number of samples. If negative, the number of samples
+        with the maximum information are chosen.
         """
         utils.init_key(self, data, "n_bits_in", n_bits_in)
         utils.init_key(self, data, "n_bits_out", n_bits_out)
         utils.init_key(self, data, "n_ones_in", n_ones_in)
         utils.init_key(self, data, "n_ones_out", n_ones_out)
         utils.init_key(self, data, "n_samples", n_samples)
+
+        # Automatically choose the optimal number of samples
+        if self["n_samples"] < 0:
+            self["n_samples"] = entropy.optimal_sample_count(
+                    n_bits_out = self["n_bits_out"],
+                    n_bits_in = self["n_bits_in"],
+                    n_ones_out = self["n_ones_out"],
+                    n_ones_in = self["n_ones_in"])
 
 class InputParameters(dict):
     """
