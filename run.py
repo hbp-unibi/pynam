@@ -24,6 +24,7 @@ and analysis.
 """
 
 import gzip
+import tarfile
 import pickle
 
 import os.path
@@ -194,11 +195,11 @@ def validate_parameters(params):
 def read_experiment(experiment_file):
     return pynam.Experiment.read_from_file(experiment_file)
 
-def write_compressed(obj, filename):
+def write_object(obj, filename):
     with gzip.open(filename, 'wb') as f:
         pickle.dump(obj, f)
 
-def read_compressed(filename):
+def read_object(filename):
     with gzip.open(filename, 'rb') as f:
         return pickle.load(f)
 
@@ -225,11 +226,11 @@ def create_networks(experiment_file, simulator, path=""):
     input_files = []
     output_files = []
     for pool in pools:
-        in_filename = os.path.join(path, pool["name"] + ".in.pickle.gz")
-        out_filename = os.path.join(path, pool["name"] + ".out.pickle.gz")
+        in_filename = os.path.join(path, pool["name"] + ".in.gz")
+        out_filename = os.path.join(path, pool["name"] + ".out.gz")
 
         logger.info("Writing network descriptor to: " + in_filename)
-        write_compressed(pool, in_filename)
+        write_object(pool, in_filename)
 
         input_files.append(in_filename)
         output_files.append(out_filename)
@@ -269,35 +270,150 @@ def execute_networks(input_files, simulator):
         # Return whether the was an error during execution
         if had_error:
             logger.error("There was an error during network execution!")
-        return had_error
+        return not had_error
 
     # Fetch the input file
     input_file = input_files[0]
 
     # Generate the output file name
-    if (input_file.endswith(".in.pickle.gz")):
-        output_file = input_file[:-12] + "out.pickle.gz"
+    if (input_file.endswith(".in.gz")):
+        output_file = input_file[:-2] + "out.gz"
     else:
-        output_file = input_file + ".out.pickle.gz"
+        output_file = input_file + ".out.gz"
 
     # Read the input file
     logger.info("Reading input file: " + input_file)
-    input_network = read_compressed(input_file)
-
-    logger.info("Setup simulator...")
-    sim = pynl.PyNNLess(simulator)
+    input_network = read_object(input_file)
 
     logger.info("Run simulation...")
+    sim = pynl.PyNNLess(simulator)
     output = sim.run(input_network)
+    times = sim.get_time_info()
+    logger.info("Simulation took " + str(times["sim"]) + "s ("
+            + str(times["total"]) + "s total)")
 
     logger.info("Writing output file: " + output_file)
-    write_compressed({
-        "input": input_network,
-        "times": sim.get_time_info(),
+    write_object({
+        "pool": input_network,
+        "times": times,
         "output": output
     }, output_file)
 
     return True
+
+def analyse_output(output_files, target, folder=""):
+    # Structure holding the final results, indexed by experiment name
+    result = {}
+    for output_file in output_files:
+        # Read the result, recreate the network pool and get the analysis
+        # instances
+        logger.info("Reading output file: " + output_file)
+        output = read_object(output_file)
+        pool = pynam.NetworkPool(output["pool"])
+        times = output["times"]
+
+        logger.info("Demultiplexing...")
+        analysis_instances = pool.build_analysis(output["output"])
+
+        # Iterate over the analysis instances -- calculate all metrics
+        for i, analysis in enumerate(analysis_instances):
+            # Create a result entry if it does not exist yet
+            meta_data = analysis["meta_data"]
+            name = meta_data["experiment_name"]
+            if not name in result:
+                keys = meta_data["keys"] + ["I", "I_ref", "fp", "fp_ref",
+                        "fn", "fn_ref", "lat_avg", "lat_std",
+                        "n_lat_inv"]
+                result[name] = {
+                    "keys": keys,
+                    "dims": len(meta_data["keys"]),
+                    "time": {
+                        "total": 0,
+                        "sim": 0,
+                        "initialize": 0,
+                        "finalize": 0
+                    },
+                    "data": np.zeros((meta_data["experiment_size"], len(keys))),
+                    "idx": 0
+                }
+
+            # Increment the time needed for this simulation (but only once per
+            # simulation)
+            if i == 0:
+                for key in times:
+                    result[name]["time"][key] = (result[name]["time"][key]
+                            + times[key])
+
+            # Fetch the values that have been varied
+            params = {
+                "data": analysis["data_params"],
+                "topology": analysis["topology_params"],
+                "input": analysis["input_params"],
+                "output": pynam.OutputParameters(meta_data["output_params"])
+            }
+            values = np.zeros(len(result[name]["keys"]))
+            for j, key in enumerate(meta_data["keys"]):
+                parts = key.split('.')
+                value = params
+                for part in parts:
+                    value = value[part]
+                values[j] = value
+
+            # Calculate all metrics
+            logger.info("Calculating metrics (" + str(i + 1) + "/"
+                    + str(len(analysis_instances)) + ")...")
+            I, mat, errs = analysis.calculate_storage_capactiy()
+            I_ref, mat_ref, errs_ref = analysis.calculate_max_storage_capacity()
+            fp = sum(map(lambda x: x["fp"], errs))
+            fp_ref = sum(map(lambda x: x["fp"], errs_ref))
+            fn = sum(map(lambda x: x["fn"], errs))
+            fn_ref = sum(map(lambda x: x["fn"], errs_ref))
+            latencies = analysis.calculate_latencies()
+            latencies_valid = latencies[latencies != np.inf]
+            latencies_invalid_count = len(latencies) - len(latencies_valid)
+            if len(latencies_valid) > 0:
+                latency_mean = np.mean(latencies_valid)
+                latency_std = np.std(latencies_valid)
+            else:
+                latency_mean = np.inf
+                latency_std = 0
+
+            # Store the metrics
+            offs = result[name]["dims"]
+            values[offs + 0] = I
+            values[offs + 1] = I_ref
+            values[offs + 2] = fp
+            values[offs + 3] = fp_ref
+            values[offs + 4] = fn
+            values[offs + 5] = fn_ref
+            values[offs + 6] = latency_mean
+            values[offs + 7] = latency_std
+            values[offs + 8] = latencies_invalid_count
+
+            # Store the row in the result matrix for this experiment
+            result[name]["data"][result[name]["idx"]] = values
+            result[name]["idx"] = result[name]["idx"] + 1
+
+    # Sort the result matrices and remove the temporary "idx" key
+    for experiment_name in result:
+        res = result[experiment_name]
+        if result[name]["dims"] > 0:
+            sort_keys = res["data"][:, 0:result[name]["dims"]].T
+            res["data"] = res["data"][np.lexsort(sort_keys)]
+        if res["data"].shape[0] == 1:
+            # If there is only one result row, it is likely that we just want
+            # to just evaluate the network. Print the keys and the results.
+            print
+            print "Results for experiment \"" + experiment_name + "\""
+            print "\t".join(res["keys"])
+            print "\t".join(map(lambda x: "%.2f" % x, res["data"][0].tolist()))
+            print
+        del res["idx"]
+
+    # Store the result in a HDF5/Matlab file
+    target = os.path.join(folder, target)
+    logger.info("Writing target file: " + target)
+    scio.savemat(target, res, do_compression=True, oned_as='row')
 
 #
 # Main entry point -- parse and validate the parameters and depending on those,
@@ -313,10 +429,12 @@ if params["mode"] == "create":
 elif params["mode"] == "exec":
     if not execute_networks(params["files"], params["simulator"]):
         sys.exit(1)
+elif params["mode"] == "analyse":
+    analyse_output(params["files"], params["target"])
 elif params["mode"] == "process":
     # Assemble a directory for the experiment files
     folder = os.path.join("out",
-            datetime.datetime.now().strftime('%Y-%m-%d-%H-%M') + "_"
+            datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S') + "_"
                     + params["simulator"])
 
     # Create the networks and fetch the input and output files
@@ -327,27 +445,13 @@ elif params["mode"] == "process":
     if not execute_networks(input_files, params["simulator"]):
         sys.exit(1)
 
+    # Analyse the output
+    analyse_output(output_files, "result.mat", folder)
+
+    # Create a tar file containing the results
+    with tarfile.open(folder + ".tar", "w") as tar:
+        tar.add(folder, arcname=folder[4:])
+
 logger.info("Done.")
 sys.exit(0)
-
-# Build the network and the metadata
-#print "Build network..."
-
-# Run the simulations and print the analysis results
-#for pool in pools:
-#    print "Running ", pool["name"], "..."
-#    output = sim.run(pool)
-#    print "Analyzing data..."
-#    analysis_instances = pool.build_analysis(output)
-#    for analysis in analysis_instances:
-#        I_ref, mat_ref, errs_ref = analysis.calculate_max_storage_capacity()
-#        I, mat, errs = analysis.calculate_storage_capactiy()
-#        fp_ref = sum(map(lambda x: x["fp"], errs_ref))
-#        fn_ref = sum(map(lambda x: x["fn"], errs_ref))
-#        fp = sum(map(lambda x: x["fp"], errs))
-#        fn = sum(map(lambda x: x["fn"], errs))
-#        print\
-#            analysis["input_params"]["sigma_t"], ",",\
-#            analysis["topology_params"]["w"], ",",\
-#            I, ",", I_ref, ",", fp, ",", fp_ref, ",", fn, ",", fn_ref
 
