@@ -25,6 +25,7 @@ from pynam.binam import BinaryMatrix
 from pynam.network import (
         InputParameters,
         TopologyParameters,
+        DataParameters,
         NetworkBuilder,
         NetworkInstance,
         NetworkPool,
@@ -117,6 +118,7 @@ def stub_simulation(mat_out, data_params={}, input_params={},
 
     # Encapsulate the perfect spike trains in the PyNNLess output format, add
     # empty elements for the input populations
+    data_params = DataParameters(data_params)
     nin = (data_params["n_bits_in"]
             * TopologyParameters(topology_params)["multiplicity"])
     return ([{} for _ in xrange(nin)] +
@@ -506,6 +508,21 @@ class TestNetworkPool(unittest.TestCase):
         self.assertEqual(len(analysis_instances), 2)
         self.assertEqual(dp1, analysis_instances[0]["data_params"])
         self.assertEqual(dp2, analysis_instances[1]["data_params"])
+
+    def test_preserve_meta_data(self):
+        ud1 = {"foo": "bar"}
+        ud2 = {"foo2": "bar2"}
+        net1 = NetworkBuilder(data_params={})
+        net2 = NetworkBuilder(data_params={})
+        pool = NetworkPool(net1.build(meta_data=ud1))
+        pool.add_network(net2.build(meta_data=ud2))
+
+        output = (stub_simulation(net1.mat_out) + stub_simulation(net2.mat_out))
+
+        analysis_instances = pool.build_analysis(output)
+        self.assertEqual(len(analysis_instances), 2)
+        self.assertEqual(ud1, analysis_instances[0]["meta_data"])
+        self.assertEqual(ud2, analysis_instances[1]["meta_data"])
 
 
 class TestNetworkAnalysis(unittest.TestCase):

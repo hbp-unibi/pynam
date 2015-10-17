@@ -387,7 +387,8 @@ class NetworkBuilder:
             topology["populations"][i]["params"]["spike_times"] = times[i]
         return topology
 
-    def build(self, time_offs=0, topology_params={}, input_params={}, seed=None):
+    def build(self, time_offs=0, topology_params={}, input_params={},
+            meta_data={}, seed=None):
         """
         Builds a network with the given topology and input data that is ready
         to be handed of to PyNNLess.
@@ -416,6 +417,7 @@ class NetworkBuilder:
                 input_params = input_params,
                 data_params = self.data_params,
                 topology_params = topology_params,
+                meta_data = meta_data,
                 mat_in = self.mat_in,
                 mat_out = self.mat_out)
 
@@ -429,7 +431,8 @@ class NetworkInstance(dict):
 
     def __init__(self, data={}, populations=[], connections=[],
             input_times=[], input_indices=[], input_split=[], input_params={},
-            data_params={}, topology_params={}, mat_in=[], mat_out=[]):
+            data_params={}, topology_params={}, meta_data={}, mat_in=[],
+            mat_out=[]):
         utils.init_key(self, data, "populations", populations)
         utils.init_key(self, data, "connections", connections)
         utils.init_key(self, data, "input_times", input_times)
@@ -438,6 +441,7 @@ class NetworkInstance(dict):
         utils.init_key(self, data, "input_params", input_params)
         utils.init_key(self, data, "data_params", data_params)
         utils.init_key(self, data, "topology_params", topology_params)
+        utils.init_key(self, data, "meta_data", meta_data)
         utils.init_key(self, data, "mat_in", mat_in)
         utils.init_key(self, data, "mat_out", mat_out)
 
@@ -537,7 +541,8 @@ class NetworkInstance(dict):
 
     @staticmethod
     def build_analysis_static(input_times, input_indices, output, input_params,
-            data_params, topology_params, mat_in, mat_out, input_split=[]):
+            data_params, topology_params, meta_data, mat_in, mat_out,
+            input_split=[]):
         # Fetch the output times and output indices
         output_times, output_indices = NetworkInstance.match_static(input_times,
                 input_indices, output)
@@ -563,6 +568,7 @@ class NetworkInstance(dict):
                     input_params = input_params[i],
                     data_params = data_params,
                     topology_params = topology_params,
+                    meta_data = meta_data,
                     mat_in = mat_in,
                     mat_out = mat_out))
             k0 = k
@@ -571,8 +577,8 @@ class NetworkInstance(dict):
     def build_analysis(self, output):
         return self.build_analysis_static(self["input_times"],
                 self["input_indices"], output, self["input_params"],
-                self["data_params"], self["topology_params"], self["mat_in"],
-                self["mat_out"], self["input_split"])
+                self["data_params"], self["topology_params"], self["meta_data"],
+                self["mat_in"], self["mat_out"], self["input_split"])
 
     def neuron_count(self):
         """
@@ -591,8 +597,8 @@ class NetworkPool(dict):
 
     def __init__(self, data={}, name="", populations=[], connections=[],
             input_times=[], input_indices=[], input_split=[], spatial_split=[],
-            input_params=[], data_params=[], topology_params=[], mat_in=[],
-            mat_out=[]):
+            input_params=[], data_params=[], topology_params=[], meta_data=[],
+            mat_in=[], mat_out=[]):
         utils.init_key(self, data, "name", name)
         utils.init_key(self, data, "populations", populations)
         utils.init_key(self, data, "connections", connections)
@@ -601,6 +607,7 @@ class NetworkPool(dict):
         utils.init_key(self, data, "input_split", input_split)
         utils.init_key(self, data, "spatial_split", spatial_split)
         utils.init_key(self, data, "input_params", input_params)
+        utils.init_key(self, data, "meta_data", meta_data)
         utils.init_key(self, data, "data_params", data_params)
         utils.init_key(self, data, "topology_params", topology_params)
         utils.init_key(self, data, "mat_in", mat_in)
@@ -612,6 +619,7 @@ class NetworkPool(dict):
             self["input_params"] = [self["input_params"]]
             self["data_params"] = [self["data_params"]]
             self["topology_params"] = [self["topology_params"]]
+            self["meta_data"] = [self["meta_data"]]
             self["mat_in"] = [self["mat_in"]]
             self["mat_out"] = [self["mat_out"]]
             self["spatial_split"].append({
@@ -637,6 +645,7 @@ class NetworkPool(dict):
         self["input_params"].append(network["input_params"])
         self["data_params"].append(network["data_params"])
         self["topology_params"].append(network["topology_params"])
+        self["meta_data"].append(network["meta_data"])
         self["mat_in"].append(network["mat_in"])
         self["mat_out"].append(network["mat_out"])
 
@@ -691,6 +700,7 @@ class NetworkPool(dict):
             input_params = self["input_params"][i]
             data_params = self["data_params"][i]
             topology_params = self["topology_params"][i]
+            meta_data = self["meta_data"][i]
             mat_in = self["mat_in"][i]
             mat_out = self["mat_out"][i]
 
@@ -703,6 +713,7 @@ class NetworkPool(dict):
                 input_params = input_params,
                 data_params = data_params,
                 topology_params = topology_params,
+                meta_data = meta_data,
                 mat_in = mat_in,
                 mat_out = mat_out,
                 input_split = input_split)
@@ -723,7 +734,7 @@ class NetworkAnalysis(dict):
 
     def __init__(self, data={}, input_times=[], input_indices=[],
             output_times=[], output_indices=[], input_params={}, data_params={},
-            topology_params={}, mat_in=[], mat_out=[]):
+            topology_params={}, meta_data={}, mat_in=[], mat_out=[]):
         utils.init_key(self, data, "input_times", input_times)
         utils.init_key(self, data, "input_indices", input_indices)
         utils.init_key(self, data, "output_times", output_times)
@@ -731,6 +742,7 @@ class NetworkAnalysis(dict):
         utils.init_key(self, data, "input_params", input_params)
         utils.init_key(self, data, "data_params", data_params)
         utils.init_key(self, data, "topology_params", topology_params)
+        utils.init_key(self, data, "meta_data", meta_data)
         utils.init_key(self, data, "mat_in", mat_in)
         utils.init_key(self, data, "mat_out", mat_out)
 
