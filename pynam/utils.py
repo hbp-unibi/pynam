@@ -36,7 +36,7 @@ def initialize_seed(seed, seq=1):
     if seed is None:
         return None
     old_state = np.random.get_state()
-    np.random.seed(long(seed * (seq + 1)) % long(1 << 30))
+    np.random.seed(int(long(seed * (seq + 1)) % long(1 << 30)))
     return old_state
 
 def finalize_seed(old_state):
