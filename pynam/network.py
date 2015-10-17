@@ -413,6 +413,7 @@ class NetworkBuilder:
                 input_times = input_times,
                 input_indices = input_indices,
                 input_split = input_split,
+                input_params = input_params,
                 data_params = self.data_params,
                 topology_params = topology_params,
                 mat_in = self.mat_in,
@@ -427,18 +428,23 @@ class NetworkInstance(dict):
     """
 
     def __init__(self, data={}, populations=[], connections=[],
-            input_times=[], input_indices=[], input_split=[], data_params={},
-            topology_params={}, mat_in=[], mat_out=[]):
+            input_times=[], input_indices=[], input_split=[], input_params={},
+            data_params={}, topology_params={}, mat_in=[], mat_out=[]):
         utils.init_key(self, data, "populations", populations)
         utils.init_key(self, data, "connections", connections)
         utils.init_key(self, data, "input_times", input_times)
         utils.init_key(self, data, "input_indices", input_indices)
         utils.init_key(self, data, "input_split", input_split)
+        utils.init_key(self, data, "input_params", input_params)
         utils.init_key(self, data, "data_params", data_params)
         utils.init_key(self, data, "topology_params", topology_params)
         utils.init_key(self, data, "mat_in", mat_in)
         utils.init_key(self, data, "mat_out", mat_out)
 
+        if not isinstance(self["input_params"], list):
+            self["input_params"] = [self["input_params"]]
+        for i in xrange(len(self["input_params"])):
+            self["input_params"][i] = InputParameters(self["input_params"][i])
         self["data_params"] = DataParameters(self["data_params"])
         self["topology_params"] = TopologyParameters(self["topology_params"])
 
@@ -530,8 +536,8 @@ class NetworkInstance(dict):
         return times_part, indices_part
 
     @staticmethod
-    def build_analysis_static(input_times, input_indices, output, data_params,
-            topology_params, mat_in, mat_out, input_split=[]):
+    def build_analysis_static(input_times, input_indices, output, input_params,
+            data_params, topology_params, mat_in, mat_out, input_split=[]):
         # Fetch the output times and output indices
         output_times, output_indices = NetworkInstance.match_static(input_times,
                 input_indices, output)
@@ -544,7 +550,7 @@ class NetworkInstance(dict):
         # a NetworkAnalysis instance for each split
         res = []
         k0 = 0
-        for k in input_split:
+        for i, k in enumerate(input_split):
             input_times_part, input_indices_part = NetworkInstance.split(
                     input_times, input_indices, k0, k)
             output_times_part, output_indices_part = NetworkInstance.split(
@@ -554,6 +560,7 @@ class NetworkInstance(dict):
                     input_indices = input_indices_part,
                     output_times = output_times_part,
                     output_indices = output_indices_part,
+                    input_params = input_params[i],
                     data_params = data_params,
                     topology_params = topology_params,
                     mat_in = mat_in,
@@ -563,9 +570,16 @@ class NetworkInstance(dict):
 
     def build_analysis(self, output):
         return self.build_analysis_static(self["input_times"],
-                self["input_indices"], output, self["data_params"],
-                self["topology_params"], self["mat_in"], self["mat_out"],
-                self["input_split"])
+                self["input_indices"], output, self["input_params"],
+                self["data_params"], self["topology_params"], self["mat_in"],
+                self["mat_out"], self["input_split"])
+
+    def neuron_count(self):
+        """
+        Returns the current number of neurons in the pool
+        """
+        return sum(map(lambda pop: pop["count"], self["populations"]))
+
 
 class NetworkPool(dict):
     """
@@ -577,7 +591,8 @@ class NetworkPool(dict):
 
     def __init__(self, data={}, name="", populations=[], connections=[],
             input_times=[], input_indices=[], input_split=[], spatial_split=[],
-            data_params=[], topology_params=[], mat_in=[], mat_out=[]):
+            input_params=[], data_params=[], topology_params=[], mat_in=[],
+            mat_out=[]):
         utils.init_key(self, data, "name", name)
         utils.init_key(self, data, "populations", populations)
         utils.init_key(self, data, "connections", connections)
@@ -585,6 +600,7 @@ class NetworkPool(dict):
         utils.init_key(self, data, "input_indices", input_indices)
         utils.init_key(self, data, "input_split", input_split)
         utils.init_key(self, data, "spatial_split", spatial_split)
+        utils.init_key(self, data, "input_params", input_params)
         utils.init_key(self, data, "data_params", data_params)
         utils.init_key(self, data, "topology_params", topology_params)
         utils.init_key(self, data, "mat_in", mat_in)
@@ -593,6 +609,7 @@ class NetworkPool(dict):
         # Fix things up in case a NetworkInstance was passed to the constructor
         if (len(self["spatial_split"]) == 0 and len(self["populations"]) > 0):
             self["input_split"] = [self["input_split"]]
+            self["input_params"] = [self["input_params"]]
             self["data_params"] = [self["data_params"]]
             self["topology_params"] = [self["topology_params"]]
             self["mat_in"] = [self["mat_in"]]
@@ -617,6 +634,7 @@ class NetworkPool(dict):
         self["input_times"] = self["input_times"] + network["input_times"]
         self["input_indices"] = self["input_indices"] + network["input_indices"]
         self["input_split"].append(network["input_split"])
+        self["input_params"].append(network["input_params"])
         self["data_params"].append(network["data_params"])
         self["topology_params"].append(network["topology_params"])
         self["mat_in"].append(network["mat_in"])
@@ -670,6 +688,7 @@ class NetworkPool(dict):
                 input_split = self["input_split"][i]
 
             # Fetch the i-th "data_params" and "topology_params" instance
+            input_params = self["input_params"][i]
             data_params = self["data_params"][i]
             topology_params = self["topology_params"][i]
             mat_in = self["mat_in"][i]
@@ -681,6 +700,7 @@ class NetworkPool(dict):
                 input_times = input_times,
                 input_indices = input_indices,
                 output = output_part,
+                input_params = input_params,
                 data_params = data_params,
                 topology_params = topology_params,
                 mat_in = mat_in,
@@ -689,6 +709,12 @@ class NetworkPool(dict):
             last_split = split
         return res
 
+    def neuron_count(self):
+        """
+        Returns the current number of neurons in the pool
+        """
+        return sum(map(lambda pop: pop["count"], self["populations"]))
+
 class NetworkAnalysis(dict):
     """
     Contains the input and output spikes gathered for a single test run.
@@ -696,17 +722,19 @@ class NetworkAnalysis(dict):
     """
 
     def __init__(self, data={}, input_times=[], input_indices=[],
-            output_times=[], output_indices=[], data_params={},
+            output_times=[], output_indices=[], input_params={}, data_params={},
             topology_params={}, mat_in=[], mat_out=[]):
         utils.init_key(self, data, "input_times", input_times)
         utils.init_key(self, data, "input_indices", input_indices)
         utils.init_key(self, data, "output_times", output_times)
         utils.init_key(self, data, "output_indices", output_indices)
+        utils.init_key(self, data, "input_params", input_params)
         utils.init_key(self, data, "data_params", data_params)
         utils.init_key(self, data, "topology_params", topology_params)
         utils.init_key(self, data, "mat_in", mat_in)
         utils.init_key(self, data, "mat_out", mat_out)
 
+        self["input_params"] = InputParameters(self["input_params"])
         self["data_params"] = DataParameters(self["data_params"])
         self["topology_params"] = TopologyParameters(self["topology_params"])
 
