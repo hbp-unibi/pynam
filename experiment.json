@@ -6,8 +6,8 @@
 	 * The data parameters implicitly specify the size of the network
 	 */
 	"data": {
-		"n_bits_in": 32,
-		"n_bits_out": 32, // Corresponds to the number of neurons
+		"n_bits_in": 16,
+		"n_bits_out": 16, // Corresponds to the number of neurons
 		"n_ones_in": 3,
 		"n_ones_out": 3
 //		"n_samples": 100 // The number of samples is automatically determined
