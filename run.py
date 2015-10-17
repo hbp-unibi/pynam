@@ -47,62 +47,36 @@ import scipy.io as scio
 import sys
 
 if (len(sys.argv) != 2):
-    print("Usage: " + sys.argv[0] + " <SIMULATOR>")
+    print("Usage: " + sys.argv[0] + " <SIMULATOR> [<EXPERIMENT>]")
+    print("       " + sys.argv[0] + " <SIMULATOR> --create [<EXPERIMENT>]")
+    print("       " + sys.argv[0] + " <SIMULATOR> --run <POOL_1> ... <POOL_N>")
+    print("       " + sys.argv[0] + " <SIMULATOR> --gather <OUT_1> ... <OUT_N>")
     sys.exit(1)
-
-# Generate test data
-print "Generate test data..."
-
-data_params = {
-    "n_bits_in": 32,
-    "n_bits_out": 32,
-    "n_ones_in": 3,
-    "n_ones_out": 3
-}
-
-topology_params = {
-    "w": 0.011,
-    "params": {
-        "cm": 0.2,
-        "e_rev_E": -40,
-        "e_rev_I": -60,
-        "v_rest": -50,
-        "v_reset": -70,
-        "v_thresh": -47,
-#        "tau_m": 409.0,
-#        "tau_refrac": 20.0
-    }
-}
-
-input_params = {
-    "time_window": 500.0,
-    "sigma_t": 5.0
-}
 
 # Build the network and the metadata
 print "Build network..."
-builder = pynam.NetworkBuilder(data_params=data_params)
-net = builder.build(topology_params=topology_params, input_params=input_params)
 
-# Run the simulation
-print "Initialize simulator..."
+experiment = pynam.Experiment.read_from_file("experiment.json")
+
+seed = 1437243
 sim = pynl.PyNNLess(sys.argv[1])
-print "Run simulation..."
-output = sim.run(net)
+pools = experiment.build(sim.get_simulator_info(), seed)
 
-# Fetch the output times and output indices from the output data
-print "Analyze result..."
-analysis = net.build_analysis(output)[0]
-I, mat_out, errs = analysis.calculate_storage_capactiy()
-I_ref, mat_out_ref, errs_ref = analysis.calculate_max_storage_capacity()
-latency = analysis.calculate_latencies()
-
-print "SAMPLES: ", analysis["data_params"]["n_samples"]
-print "INFORMATION: ", I, " of a theoretical ", I_ref
-print "MAT OUT:\n", np.array(mat_out, dtype=np.uint8)
-print "MAT OUT (reference):\n", mat_out_ref
-print "MAT OUT EXPECTED:\n", analysis["mat_out"]
-print "AVG. LATENCY:\n", np.mean(latency)
-print "LATENCIES:\n", latency
-
+# Run the simulations and print the analysis results
+for pool in pools:
+    print "Running ", pool["name"], "..."
+    output = sim.run(pool)
+    print "Analyzing data..."
+    analysis_instances = pool.build_analysis(output)
+    for analysis in analysis_instances:
+        I_ref, mat_ref, errs_ref = analysis.calculate_max_storage_capacity()
+        I, mat, errs = analysis.calculate_storage_capactiy()
+        fp_ref = sum(map(lambda x: x["fp"], errs_ref))
+        fn_ref = sum(map(lambda x: x["fn"], errs_ref))
+        fp = sum(map(lambda x: x["fp"], errs))
+        fn = sum(map(lambda x: x["fn"], errs))
+        print\
+            analysis["input_params"]["sigma_t"], ",",\
+            analysis["topology_params"]["w"], ",",\
+            I, ",", I_ref, ",", fp, ",", fp_ref, ",", fn, ",", fn_ref
 

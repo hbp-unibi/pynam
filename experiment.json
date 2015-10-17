@@ -1,0 +1,63 @@
+/**
+ * Demo experiment
+ */
+{
+	/*
+	 * The data parameters implicitly specify the size of the network
+	 */
+	"data": {
+		"n_bits_in": 16,
+		"n_bits_out": 16, // Corresponds to the number of neurons
+		"n_ones_in": 3,
+		"n_ones_out": 3
+//		"n_samples": 100 // The number of samples is automatically determined
+	},
+
+	/**
+	 * Network topology and neuron parameters
+	 */
+	"topology": {
+		"params": {
+			"cm": 0.2,
+			"e_rev_E": -40,
+			"e_rev_I": -60,
+			"v_rest": -50,
+			"v_reset": -70,
+			"v_thresh": -47
+		},
+		"multiplicity": 1, // Size of a neuron population
+		"param_noise": {
+			// Specify noise parameters here
+		},
+		"neuron_type": "IF_cond_exp",
+		"w": 0.011,
+		"sigma_w": 0.0
+	},
+
+	/**
+	 * Input data specification
+	 */
+	"input": {
+		"burst_size": 1,
+		"time_window": 100.0,
+		"isi": 1.0,
+		"sigma_t": 0.0,
+		"sigma_t_offs": 0.0,
+		"p0": 0.0,
+		"p1": 1.0
+	},
+
+	/**
+	 * Experiments to be conducted
+	 */
+	"experiments": [
+		{
+			"name": "sweep_sigma_t",
+			"sweeps": {
+				"topology.w": {"min": 0.001, "max": 0.01, "count": 10}
+			},
+			"repeat": 10
+		}
+	]
+}
+
