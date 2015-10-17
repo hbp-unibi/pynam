@@ -44,7 +44,7 @@
 		"sigma_t": 0.0,
 		"sigma_t_offs": 0.0,
 		"p0": 0.0,
-		"p1": 1.0
+		"p1": 0.0
 	},
 
 	/**
@@ -52,9 +52,9 @@
 	 */
 	"experiments": [
 		{
-			"name": "sweep_sigma_t",
+			"name": "sweep_w",
 			"sweeps": {
-				"topology.w": {"min": 0.001, "max": 0.01, "count": 10}
+				"topology.w": {"min": 0.0, "max": 0.01, "count": 10}
 			},
 			"repeat": 10
 		}
