@@ -24,32 +24,12 @@ a spiking neural network.
 import binam
 import entropy
 import data
+import utils
+
 import bisect
 import itertools
 import numpy as np
 import pynnless as pynl
-import pynnless.pynnless_utils as utils
-
-def initialize_seed(seed, seq=1):
-    """
-    Initializes the numpy random number generator seed with the given seed
-    value. The seed value may be None, in which case no changes the the numpy
-    seed are made. Returns the old random generator state or None if no change
-    was made.
-    """
-    if seed is None:
-        return None
-    old_state = np.random.get_state()
-    np.random.seed(seed * (seq + 1))
-    return old_state
-
-def finalize_seed(old_state):
-    """
-    Restores the numpy random seed to its old value, or does nothin if the given
-    value is "None".
-    """
-    if (old_state != None):
-        np.random.set_state(old_state)
 
 class DataParameters(dict):
     """
@@ -245,25 +225,25 @@ class NetworkBuilder:
             self.data_params = DataParameters(data_params)
 
             # Set the random number generator seed and generate the data
-            old_seed = initialize_seed(seed, 1)
+            old_state = utils.initialize_seed(seed, 1)
             try:
                 self.mat_in = data.generate(
                     n_bits = self.data_params["n_bits_in"],
                     n_ones = self.data_params["n_ones_in"],
                     n_samples = self.data_params["n_samples"])
             finally:
-                finalize_seed(old_seed)
+                utils.finalize_seed(old_state)
 
             # Reset the random number generator seed to make sure that the first
             # n_samples are always the same
-            old_seed = initialize_seed(seed, 2)
+            old_state = utils.initialize_seed(seed, 2)
             try:
                 self.mat_out = data.generate(
                     n_bits = self.data_params["n_bits_out"],
                     n_ones = self.data_params["n_ones_out"],
                     n_samples = self.data_params["n_samples"])
             finally:
-                finalize_seed(old_seed)
+                utils.finalize_seed(old_state)
 
         else:
             # If a matrices are given, derive the data parameters from those
@@ -407,17 +387,27 @@ class NetworkBuilder:
             topology["populations"][i]["params"]["spike_times"] = times[i]
         return topology
 
-    def build(self, time_offs=0, topology_params={}, input_params={}):
+    def build(self, time_offs=0, topology_params={}, input_params={}, seed=None):
         """
         Builds a network with the given topology and input data that is ready
         to be handed of to PyNNLess.
         """
 
-        topology = self.build_topology(topology_params=topology_params)
-        input_times, input_indices, input_split = self.build_input(
-                time_offs=time_offs,
-                topology_params=topology_params,
-                input_params=input_params)
+        old_state = utils.initialize_seed(seed, 1)
+        try:
+            topology = self.build_topology(topology_params=topology_params)
+        finally:
+            utils.finalize_seed(old_state)
+
+        old_state = utils.initialize_seed(seed, 2)
+        try:
+            input_times, input_indices, input_split = self.build_input(
+                    time_offs=time_offs,
+                    topology_params=topology_params,
+                    input_params=input_params)
+        finally:
+            utils.finalize_seed(old_state)
+
         return NetworkInstance(
                 self.inject_input(topology, input_times),
                 input_times = input_times,

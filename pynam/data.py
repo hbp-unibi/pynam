@@ -23,6 +23,7 @@ can be used to train a BiNAM.
 """
 
 import entropy
+import utils
 import numpy as np
 
 #
@@ -98,15 +99,10 @@ def _initialize_generate(n_bits, n_ones, n_samples, seed=None):
         raise Exception("Arguments must be non-negative!")
     if (n_ones > n_bits):
         raise Exception("n_ones must be smaller or equal to n_bits!")
-    if (seed != None):
-        old_random_state = np.random.get_state()
-        np.random.seed(seed)
-        return old_random_state
-    return None
+    return utils.initialize_seed(seed)
 
 def _finalize_generate(old_random_state):
-    if (old_random_state != None):
-        np.random.set_state(old_random_state)
+    utils.finalize_seed(old_random_state)
 
 #
 # Public methods
