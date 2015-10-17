@@ -179,6 +179,16 @@ class Experiment(dict):
             pools = pools + [NetworkPool(name=experiment["name"] + "." + str(c))
                     for c in xrange(simulator_info["concurrency"])]
 
+            # Metadata to store along with the networks
+            meta_data = {
+                "experiment_idx": i,
+                "experiment_name": experiment["name"],
+                "experiment_size": (experiment["repeat"] *
+                        (len(input_params_list) * len(topology_params_list))),
+                "keys": experiment.get_keys(),
+                "output_params": self["output"]
+            }
+
             # Repeat the experiment as many times as specified in the "repeat"
             # parameter
             local_build_seed = build_seed
@@ -198,6 +208,7 @@ class Experiment(dict):
                     net = builder.build(
                             topology_params=topology_params["topology"],
                             input_params=input_params_list,
+                            meta_data=meta_data,
                             seed=local_build_seed)
 
                     # Search for a pool to which the network should be added.
