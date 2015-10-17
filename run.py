@@ -446,10 +446,14 @@ elif params["mode"] == "process":
         sys.exit(1)
 
     # Analyse the output
-    analyse_output(output_files, "result.mat", folder)
+    if params["experiment"].endswith(".json"):
+        target = params["experiment"][:-5] + ".mat"
+    else:
+        target = params["experiment"] + ".mat"
+    analyse_output(output_files, target, folder)
 
     # Create a tar file containing the results
-    with tarfile.open(folder + ".tar", "w") as tar:
+    with tarfile.open(folder + ".tar.gz", "w|gz") as tar:
         tar.add(folder, arcname=folder[4:])
 
 logger.info("Done.")
