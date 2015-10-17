@@ -24,13 +24,13 @@ use the following format:
 
 Note that the `<SIMULATOR>` is needed in order to partition the experiment
 according to the hardware resources. This command will generate a set of
-".in.json.gz" files that can be passed to the execution stage:
+".in.gz" files that can be passed to the execution stage:
 
     ./run.py <SIMULATOR> --exec <IN_1> ... <IN_N>
 
 This command will execute the network simulations for the given network
 descriptions -- if more than one network descriptions is given, a new process
-will be spawned for each execution. Generates a series of ".out.json.gz" files
+will be spawned for each execution. Generates a series of ".out.gz" files
 in the same directory as the input files.
 
     ./run.py <TARGET> --analyse <OUT_1> ... <OUT_N>
