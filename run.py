@@ -277,7 +277,7 @@ def execute_networks(input_files, simulator):
 
     # Generate the output file name
     if (input_file.endswith(".in.gz")):
-        output_file = input_file[:-2] + "out.gz"
+        output_file = input_file[:-6] + ".out.gz"
     else:
         output_file = input_file + ".out.gz"
 
