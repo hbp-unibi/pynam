@@ -107,7 +107,7 @@ def parse_parameters():
         short_help()
 
     # Make sure the first argument does not start with "--"
-    if len(sys.argv) > 2 and sys.argv[1].startswith("--"):
+    if len(sys.argv) >= 2 and sys.argv[1].startswith("--"):
         if (sys.argv[1] == '-h' or sys.argv[1] == '--help'):
             help()
         print("Error: Invalid arguments")
