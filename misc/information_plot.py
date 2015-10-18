@@ -80,8 +80,8 @@ SIMULATOR_LABELS = {
 # Colors for all simulators
 SIMULATOR_COLORS = {
     "ess": '#73d216',
-    "nmpm1": "#f57900",
-    "nmmc1": "#75507b",
+    "nmpm1": "#75507b",
+    "nmmc1": "#f57900",
     "spikey": "#cc0000",
     "nest": "#3465a4"
 }
