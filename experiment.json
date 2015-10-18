@@ -19,18 +19,18 @@
 	"topology": {
 		"params": {
 			"cm": 0.2,
-			"e_rev_E": -40,
-			"e_rev_I": -60,
-			"v_rest": -50,
-			"v_reset": -70,
-			"v_thresh": -47
+			"e_rev_E": 0,
+			"v_rest": -70,
+			"v_reset": -75,
+			"v_thresh": -55,
+			"tau_m": 10.0
 		},
 		"multiplicity": 1, // Size of a neuron population
 		"param_noise": {
 			// Specify noise parameters here
 		},
 		"neuron_type": "IF_cond_exp",
-		"w": 0.011,
+		"w": 0.01,
 		"sigma_w": 0.0
 	},
 
@@ -59,9 +59,9 @@
 	 */
 	"experiments": [
 		{
-			"name": "sweep_sigma_t",
+			"name": "Sweep $\\sigma t$ for $m=n=16$, $c=d=3$",
 			"sweeps": {
-				"input.sigma_t": {"min": 0.0, "max": 10.0, "count": 20}
+				"input.sigma_t": {"min": 0.0, "max": 10.0, "count": 40}
 			},
 			"repeat": 20
 		}
