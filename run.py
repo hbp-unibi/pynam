@@ -216,7 +216,7 @@ def create_networks(experiment_file, simulator, path=""):
     seed = 1437243
     logger.info("Generating networks...")
     pools = experiment.build(pynl.PyNNLess.get_simulator_info_static(simulator),
-            seed)
+            simulator=simulator, seed)
 
     # Create the target directories
     if path != "":

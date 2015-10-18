@@ -131,7 +131,7 @@ class Experiment(dict):
 
         return input_params, topology_params
 
-    def build(self, simulator_info, seed=None):
+    def build(self, simulator_info, simulator="", seed=None):
         """
         Builds all NetworkPool instances required to conduct the specified
         experiments.
@@ -185,7 +185,8 @@ class Experiment(dict):
                 "experiment_size": (experiment["repeat"] *
                         (len(input_params_list) * len(topology_params_list))),
                 "keys": experiment.get_keys(),
-                "output_params": self["output"]
+                "output_params": self["output"],
+                "simulator": simulator
             }
 
             # Repeat the experiment as many times as specified in the "repeat"
