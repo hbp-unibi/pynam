@@ -413,7 +413,7 @@ def analyse_output(output_files, target, folder=""):
     # Store the result in a HDF5/Matlab file
     target = os.path.join(folder, target)
     logger.info("Writing target file: " + target)
-    scio.savemat(target, res, do_compression=True, oned_as='row')
+    scio.savemat(target, result, do_compression=True, oned_as='row')
 
 #
 # Main entry point -- parse and validate the parameters and depending on those,
