@@ -151,7 +151,7 @@ def plot_measure(ax, xs, ys, ys_std, color, simulator, xlabel, ylabel,
     if first:
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
-
+        ax.set_ylim(bottom=0)
 for target_file in sys.argv[1:]:
     print "Processing " + target_file
     results = pynam.utils.loadmat(target_file)
