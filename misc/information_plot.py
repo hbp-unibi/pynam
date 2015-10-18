@@ -71,8 +71,8 @@ DIM_LABELS = {
 # Labels for all simulators
 SIMULATOR_LABELS = {
     "ess": "ESS",
-    "nmpm1": "NM-PM-1",
-    "nmmc1": "NM-MC-1",
+    "nmpm1": "NM-PM1",
+    "nmmc1": "NM-MC1",
     "spikey": "Spikey",
     "nest": "NEST"
 }
