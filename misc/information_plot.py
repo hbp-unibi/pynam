@@ -187,7 +187,7 @@ for target_file in sys.argv[1:]:
         ax, first, _ = get_figure(experiment, "info", simulator)
         plot_measure(ax, xs=means[:, 0], ys=means[:, dims],
                 ys_std=stds[:, dims], color=color, simulator=simulator,
-                xlabel=xlabel, ylabel="Information $I$ [bit]",
+                xlabel=xlabel, ylabel="Storage capacity $S$ [bit]",
                 ys_ref=means[:, dims + 1], first=first)
 
         # Plot the number of false positives
