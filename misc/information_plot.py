@@ -208,7 +208,7 @@ for target_file in sys.argv[1:]:
         ax, first, id_ = get_figure(experiment, "latency", simulator)
         plot_measure(ax, xs=means[:, 0], ys=means[:, dims + 5],
                 ys_std=stds[:, dims + 5], color=color, simulator=simulator,
-                xlabel=xlabel, ylabel="False negatives $\\delta$ [ms]",
+                xlabel=xlabel, ylabel="Latency $\\delta$ [ms]",
                 first=first)
 
         # Plot the times
