@@ -211,12 +211,15 @@ def create_networks(experiment_file, simulator, path=""):
 
     # Read the experiment
     experiment = read_experiment(experiment_file)
+    experiment_name = experiment_file
+    if experiment_name.find('.') > -1:
+        experiment_name = experiment_name[0:experiment_name.find('.')]
 
     # Build the experiment descriptors
     seed = 1437243
     logger.info("Generating networks...")
     pools = experiment.build(pynl.PyNNLess.get_simulator_info_static(simulator),
-            simulator=simulator, seed)
+            simulator=simulator, seed=seed)
 
     # Create the target directories
     if path != "":
@@ -225,9 +228,11 @@ def create_networks(experiment_file, simulator, path=""):
     # Store the descriptors in the given path
     input_files = []
     output_files = []
-    for pool in pools:
-        in_filename = os.path.join(path, pool["name"] + ".in.gz")
-        out_filename = os.path.join(path, pool["name"] + ".out.gz")
+    for i, pool in enumerate(pools):
+        in_filename = os.path.join(path, experiment_name + "_" + str(i)
+                + ".in.gz")
+        out_filename = os.path.join(path, experiment_name + "_" + str(i)
+                + ".out.gz")
 
         logger.info("Writing network descriptor to: " + in_filename)
         write_object(pool, in_filename)
@@ -322,11 +327,11 @@ def analyse_output(output_files, target, folder=""):
             name = meta_data["experiment_name"]
             if not name in result:
                 keys = meta_data["keys"] + ["I", "I_ref", "fp", "fp_ref",
-                        "fn", "fn_ref", "lat_avg", "lat_std",
-                        "n_lat_inv"]
+                        "fn", "lat_avg", "lat_std", "n_lat_inv"]
                 result[name] = {
                     "keys": keys,
                     "dims": len(meta_data["keys"]),
+                    "simulator": meta_data["simulator"],
                     "time": {
                         "total": 0,
                         "sim": 0,
@@ -341,8 +346,8 @@ def analyse_output(output_files, target, folder=""):
             # simulation)
             if i == 0:
                 for key in times:
-                    result[name]["time"][key] = (result[name]["time"][key]
-                            + times[key])
+                    t = times[key]
+                    result[name]["time"][key] = result[name]["time"][key] + t
 
             # Fetch the values that have been varied
             params = {
@@ -360,14 +365,14 @@ def analyse_output(output_files, target, folder=""):
                 values[j] = value
 
             # Calculate all metrics
-            logger.info("Calculating metrics (" + str(i + 1) + "/"
-                    + str(len(analysis_instances)) + ")...")
+            if i == 0 or (i + 1) % 50 == 0 or i + 1 == len(analysis_instances):
+                logger.info("Calculating metrics (" + str(i + 1) + "/"
+                        + str(len(analysis_instances)) + ")...")
             I, mat, errs = analysis.calculate_storage_capactiy()
             I_ref, mat_ref, errs_ref = analysis.calculate_max_storage_capacity()
             fp = sum(map(lambda x: x["fp"], errs))
             fp_ref = sum(map(lambda x: x["fp"], errs_ref))
             fn = sum(map(lambda x: x["fn"], errs))
-            fn_ref = sum(map(lambda x: x["fn"], errs_ref))
             latencies = analysis.calculate_latencies()
             latencies_valid = latencies[latencies != np.inf]
             latencies_invalid_count = len(latencies) - len(latencies_valid)
@@ -385,10 +390,9 @@ def analyse_output(output_files, target, folder=""):
             values[offs + 2] = fp
             values[offs + 3] = fp_ref
             values[offs + 4] = fn
-            values[offs + 5] = fn_ref
-            values[offs + 6] = latency_mean
-            values[offs + 7] = latency_std
-            values[offs + 8] = latencies_invalid_count
+            values[offs + 5] = latency_mean
+            values[offs + 6] = latency_std
+            values[offs + 7] = latencies_invalid_count
 
             # Store the row in the result matrix for this experiment
             result[name]["data"][result[name]["idx"]] = values
