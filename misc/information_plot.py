@@ -26,11 +26,17 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
-import scipy.io as scio
 import sys
 
-if len(sys.argv) != 2:
-    print "Usage: " + sys.argv[0] + " <TARGET FILE>"
+# Include the PyNAM folder
+import sys
+import os
+sys.path.append(
+        os.path.join(os.path.dirname(os.path.realpath(__file__)), ".."))
+import pynam.utils
+
+if len(sys.argv) < 2:
+    print "Usage: " + sys.argv[0] + " <TARGET FILE 1> ... <TARGET FILE N>"
     sys.exit(1)
 
 # Labels for all possible sweep dimensions (wip)
@@ -71,24 +77,41 @@ SIMULATOR_LABELS = {
     "nest": "NEST"
 }
 
-# Read the results
-results = scio.loadmat(sys.argv[1], squeeze_me=True, struct_as_record=False)
-
-results = {
-    "sweep_sigma_t": results
+# Colors for all simulators
+SIMULATOR_COLORS = {
+    "ess": '#73d216',
+    "nmpm1": "#f57900",
+    "nmmc1": "#75507b",
+    "spikey": "#cc0000",
+    "nest": "#3465a4"
 }
-#print results
 
-# Iterate over all experiments
-for name in results:
-    keys = results[name]["keys"]
-    dims = results[name]["dims"]
-    data = results[name]["data"]
+figures = {}
 
-    if dims != 1:
-        print "Only one-dimensional experiments are supported (yet), skipping"
-        continue
+def cm2inch(value):
+    return value / 2.54
 
+def get_figure(experiment, measure, simulator):
+    global figures
+    first = False
+    if not experiment in figures:
+        figures[experiment] = {}
+    if not measure in figures[experiment]:
+        first = True
+        figures[experiment][measure] = {}
+        fig = plt.figure(figsize=(cm2inch(8), cm2inch(6)))
+        ax = fig.add_subplot(111)
+        figures[experiment][measure]["figure"] = fig
+        figures[experiment][measure]["axis"] = ax
+        figures[experiment][measure]["count"] = 0
+        figures[experiment][measure]["simulators"] = []
+    figures[experiment][measure]["count"] =\
+            figures[experiment][measure]["count"] + 1
+    figures[experiment][measure]["simulators"].append(simulator)
+    return figures[experiment][measure]["axis"], first,\
+            figures[experiment][measure]["count"]
+
+def calc_means_stds(data, dims):
     # Iterate over the data table, find patches with the same key dimensions,
     # create a smaller table containing the mean and standard deviation of all
     # values
@@ -104,39 +127,120 @@ for name in results:
         means[idx] = np.mean(data[start:end], 0)
         stds[idx] = np.std(data[start:end], 0)
 
-        print stds[idx]
-
         means[idx, 0:dims] = data[start, 0:dims]
         stds[idx, 0:dims] = data[start, 0:dims]
 
         idx = idx + 1
         start = end
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    xs = means[0:idx, 0]
-    I = means[0:idx, dims]
-    I_ref = means[0:idx, dims + 1]
-    ax.plot(xs, I, color='k')
-    ax.plot(xs, I - stds[0:idx, dims] * 0.5, linestyle=':', color='k')
-    ax.plot(xs, I + stds[0:idx, dims] * 0.5, linestyle=':', color='k')
-    ax.plot(xs, I_ref, linestyle='--', color='k')
+    means.resize((idx, data.shape[1]))
+    stds.resize((idx, data.shape[1]))
 
-    # Set the simulator label
-    if "simulator" in results[name]:
-        simulator = results[name]["simulator"]
+    return means, stds
+
+def plot_measure(ax, xs, ys, ys_std, color, simulator, xlabel, ylabel,
+        ys_ref=None, first=True):
+    if first:
+        if not ys_ref is None:
+            ax.plot(xs, ys_ref, linestyle='--', color='k', lw=1.0,
+                   label="Reference")
+
+    ax.plot(xs, ys, color=color, lw=1.0, zorder=1, label=simulator)
+    ax.plot(xs, ys - ys_std * 0.5, lw=0.5, linestyle=':', color=color, zorder=0)
+    ax.plot(xs, ys + ys_std * 0.5, lw=0.5, linestyle=':', color=color, zorder=0)
+    if first:
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+
+for target_file in sys.argv[1:]:
+    print "Processing " + target_file
+    results = pynam.utils.loadmat(target_file)
+
+    # Iterate over all experiments
+    for experiment in results:
+        # Skip special keys
+        if experiment.startswith("__"):
+            continue
+
+        keys = results[experiment]["keys"]
+        dims = results[experiment]["dims"]
+        data = results[experiment]["data"]
+        times = results[experiment]["time"]
+        simulator = results[experiment]["simulator"]
+        color = 'k'
         if simulator in SIMULATOR_LABELS:
-            ax.set_title(SIMULATOR_LABELS[simulator])
+            color = SIMULATOR_COLORS[simulator]
+            simulator = SIMULATOR_LABELS[simulator]
+
+        if dims != 1:
+            print "Only one-dimensional experiments are supported (yet)"
+            print "Skipping experiment " + experiment
+            continue
+
+        xlabel = keys[0]
+        if xlabel in DIM_LABELS:
+            xlabel = DIM_LABELS[xlabel]
+
+        means, stds = calc_means_stds(data, dims)
+
+        # Plot the information metric
+        ax, first, _ = get_figure(experiment, "info", simulator)
+        plot_measure(ax, xs=means[:, 0], ys=means[:, dims],
+                ys_std=stds[:, dims], color=color, simulator=simulator,
+                xlabel=xlabel, ylabel="Information $I$ [bit]",
+                ys_ref=means[:, dims + 1], first=first)
+
+        # Plot the number of false positives
+        ax, first, _ = get_figure(experiment, "fp", simulator)
+        plot_measure(ax, xs=means[:, 0], ys=means[:, dims + 2],
+                ys_std=stds[:, dims + 2], color=color, simulator=simulator,
+                xlabel=xlabel, ylabel="False positives $f_p$ [bit]",
+                ys_ref=means[:, dims + 3], first=first)
+
+        # Plot the number of false negatives
+        ax, first, _ = get_figure(experiment, "fn", simulator)
+        plot_measure(ax, xs=means[:, 0], ys=means[:, dims + 4],
+                ys_std=stds[:, dims + 4], color=color, simulator=simulator,
+                xlabel=xlabel, ylabel="False negatives $f_n$ [bit]",
+                first=first)
+
+        # Plot the latencies
+        ax, first, id_ = get_figure(experiment, "latency", simulator)
+        plot_measure(ax, xs=means[:, 0], ys=means[:, dims + 5],
+                ys_std=stds[:, dims + 5], color=color, simulator=simulator,
+                xlabel=xlabel, ylabel="False negatives $\\delta$ [ms]",
+                first=first)
+
+        # Plot the times
+        ax, first, id_ = get_figure(experiment, "times", simulator)
+        ax.bar(id_ - 1, times["total"], width=0.35, color="#3465a4")
+        ax.bar(id_ - 1, times["sim"], width=0.35, color="#4e9a06")
+        if first:
+            ax.set_ylabel("Simulation time $t$ [s]")
+
+# Finalize the plots, save them as PDF
+for experiment in figures:
+    for measure in figures[experiment]:
+        fig = figures[experiment][measure]["figure"]
+        ax = figures[experiment][measure]["axis"]
+        count = figures[experiment][measure]["count"]
+        simulators = figures[experiment][measure]["simulators"]
+
+        ax.set_title(experiment)
+        if measure == "times":
+            ax.set_xticks(np.arange(count) + 0.175)
+            ax.set_xticklabels(simulators)
+            pTotal = mpatches.Patch(color="#3465a4")
+            pSim = mpatches.Patch(color="#4e9a06")
+            ax.legend([pTotal, pSim], ["Total", "Simulation Only"],
+                    loc='lower center', bbox_to_anchor=(0.5, 1.05),
+                    ncol=count + 1)
         else:
-            ax.set_title(simulator)
+            ax.legend(loc='lower center', bbox_to_anchor=(0.5, 1.05),
+                    ncol=count + 1)
 
-    # Set the sweep dimension label
-    if keys[0] in DIM_LABELS:
-        ax.set_xlabel(DIM_LABELS[keys[0]])
-    else:
-        ax.set_xlabel(keys[0])
+        if not os.path.exists("out"):
+            os.mkdirs("out")
+        fig.savefig("out/plot_" + measure + ".pdf", format='pdf',
+                bbox_inches='tight')
 
-    # Set the information label
-    ax.set_ylabel("Information $I$ [bit]")
-
-    plt.show()
