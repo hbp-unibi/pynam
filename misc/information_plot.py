@@ -234,10 +234,10 @@ for experiment in figures:
             pSim = mpatches.Patch(color="#4e9a06")
             ax.legend([pTotal, pSim], ["Total", "Simulation Only"],
                     loc='lower center', bbox_to_anchor=(0.5, 1.05),
-                    ncol=count + 1)
+                    ncol=2)
         else:
             ax.legend(loc='lower center', bbox_to_anchor=(0.5, 1.05),
-                    ncol=count + 1)
+                    ncol=2)
 
         if not os.path.exists("out"):
             os.mkdirs("out")
