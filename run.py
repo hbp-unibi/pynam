@@ -447,9 +447,9 @@ elif params["mode"] == "process":
 
     # Analyse the output
     if params["experiment"].endswith(".json"):
-        target = params["experiment"][:-5] + ".mat"
+        target = params["experiment"][:-5] + "." + params["simulator"] + ".mat"
     else:
-        target = params["experiment"] + ".mat"
+        target = params["experiment"] + "." + params["simulator"] + ".mat"
     analyse_output(output_files, target, folder)
 
     # Create a tar file containing the results
