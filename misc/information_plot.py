@@ -72,7 +72,7 @@ DIM_LABELS = {
 SIMULATOR_LABELS = {
     "ess": "ESS",
     "nmpm1": "NM-PM1",
-    "nmmc1": "NM-MC1",
+    "spiNNaker": "NM-MC1",
     "spikey": "Spikey",
     "nest": "NEST"
 }
@@ -81,7 +81,7 @@ SIMULATOR_LABELS = {
 SIMULATOR_COLORS = {
     "ess": '#73d216',
     "nmpm1": "#75507b",
-    "nmmc1": "#f57900",
+    "spiNNaker": "#f57900",
     "spikey": "#cc0000",
     "nest": "#3465a4"
 }
