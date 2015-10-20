@@ -142,8 +142,8 @@ def plot_measure(ax, xs, ys, ys_std, color, simulator, xlabel, ylabel,
         ys_ref=None, first=True):
     if first:
         if not ys_ref is None:
-            ax.plot(xs, ys_ref, linestyle='--', color='k', lw=1.0,
-                   label="Reference")
+            ax.plot(xs, ys_ref, linestyle='--', color='k', lw=1.0)
+#                   label="Reference")
 
     ax.plot(xs, ys, color=color, lw=1.0, zorder=1, label=simulator)
     ax.plot(xs, ys - ys_std * 0.5, lw=0.5, linestyle=':', color=color, zorder=0)
@@ -212,11 +212,12 @@ for target_file in sys.argv[1:]:
                 first=first)
 
         # Plot the times
-        ax, first, id_ = get_figure(experiment, "times", simulator)
-        ax.bar(id_ - 1, times["total"], width=0.35, color="#3465a4")
-        ax.bar(id_ - 1, times["sim"], width=0.35, color="#4e9a06")
-        if first:
-            ax.set_ylabel("Simulation time $t$ [s]")
+        if simulator != "ESS":
+            ax, first, id_ = get_figure(experiment, "times", simulator)
+            ax.bar(id_ - 1, times["total"], width=0.35, color="#3465a4")
+            ax.bar(id_ - 1, times["sim"], width=0.35, color="#4e9a06")
+            if first:
+                ax.set_ylabel("Simulation time $t$ [s]")
 
 # Finalize the plots, save them as PDF
 for experiment in figures:
