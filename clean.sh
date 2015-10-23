@@ -1,5 +1,5 @@
 #!/bin/sh
-#   PyNNLess -- Yet Another PyNN Abstraction Layer
+#   PyNAM -- Python Neural Associative Memory Simulator and Evaluator
 #   Copyright (C) 2015 Andreas Stöckel
 #
 #   This program is free software: you can redistribute it and/or modify
