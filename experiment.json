@@ -22,15 +22,15 @@
 			"e_rev_E": 0,
 			"v_rest": -70,
 			"v_reset": -75,
-			"v_thresh": -55,
+			"v_thresh": -57,
 			"tau_m": 10.0
 		},
-		"multiplicity": 1, // Size of a neuron population
+		"multiplicity": 4, // Size of a neuron population
 		"param_noise": {
 			// Specify noise parameters here
 		},
 		"neuron_type": "IF_cond_exp",
-		"w": 0.01,
+		"w": 0.001,
 		"sigma_w": 0.0
 	},
 
@@ -38,10 +38,10 @@
 	 * Input data specification
 	 */
 	"input": {
-		"burst_size": 1,
-		"time_window": 100.0,
-		"isi": 1.0,
-		"sigma_t": 0.0,
+		"burst_size": 2,
+		"time_window": 500.0,
+		"isi": 10.0,
+		"sigma_t": 2.0,
 		"sigma_t_offs": 0.0,
 		"p0": 0.0,
 		"p1": 0.0
@@ -58,12 +58,20 @@
 	 * Experiments to be conducted
 	 */
 	"experiments": [
-		{
+		/*{
 			"name": "Sweep $\\sigma t$ for $m=n=16$, $c=d=3$",
 			"sweeps": {
 				"input.sigma_t": {"min": 0.0, "max": 10.0, "count": 40}
 			},
 			"repeat": 20
+		},*/
+		{
+			"name": "Sweep $E_\\mathrm{thresh}$/$w$ for $m=n=16$, $c=d=3$",
+			"sweeps": {
+				"topology.params.v_thresh": {"min": -69, "max": -55, "count": 30},
+				"topology.w": {"min": 0.001, "max": 0.01, "count": 30}
+			},
+			"repeat": 1
 		}
 	]
 }
