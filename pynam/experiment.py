@@ -233,7 +233,7 @@ class Experiment(dict):
                         if ((target_pool_idx == -1 or pools[l].neuron_count()
                                 < pools[target_pool_idx].neuron_count()) and 
                                  pools[l].neuron_count() + net.neuron_count()
-                                    < simulator_info["max_neuron_count"]):
+                                    <= simulator_info["max_neuron_count"]):
                             # If uniform parameter are required (Spikey), check
                             # whether the target network parameters are the same
                             # as the current network parameters
