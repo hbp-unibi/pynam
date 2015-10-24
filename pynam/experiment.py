@@ -87,10 +87,21 @@ class Experiment(dict):
                     + "\": Unknown parameter \"" + parts[1] + "\", known "
                     + "parameters are "
                     + str(cls.PARAMETER_PROTOTYPES[parts[0]].keys()))
-            if (len(parts) == 3 and not
-                isinstance(cls.PARAMETER_PROTOTYPES[parts[0]][parts[1]], dict)):
-                raise ExperimentException("Invalid parameter key \"" + key
-                    + "\": Parameter \"" + parts[1] + "\" is not a dictionary")
+            if len(parts) == 3:
+                if not isinstance(cls.PARAMETER_PROTOTYPES[parts[0]][parts[1]],
+                        dict):
+                    raise ExperimentException("Invalid parameter key \"" + key
+                        + "\": Parameter \"" + parts[1]
+                        + "\" is not a dictionary")
+                if (key.startswith("topology.params.") or
+                        key.startswith("topology.param_noise.")):
+                    if not parts[2] in ["cm", "tau_refrac", "v_spike",
+                            "v_reset", "v_rest", "tau_m", "i_offset", "a", "b",
+                            "delta_T", "tau_w", "v_thresh", "e_rev_E",
+                            "tau_syn_E", "e_rev_I", "tau_syn_I", "g_leak"]:
+                        raise ExperimentException("Invalid parameter key \""
+                                + key + "\": " + parts[2] + "\" is not a valid "
+                                + "neuron parameter")
 
     def build_parameters(self, experiment):
         # Build the input and topology parameters for a single experiment
