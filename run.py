@@ -368,7 +368,8 @@ def analyse_output(output_files, target, folder=""):
             if i == 0 or (i + 1) % 50 == 0 or i + 1 == len(analysis_instances):
                 logger.info("Calculating metrics (" + str(i + 1) + "/"
                         + str(len(analysis_instances)) + ")...")
-            I, mat, errs = analysis.calculate_storage_capactiy()
+            I, mat, errs = analysis.calculate_storage_capactiy(
+                    output_params=params["output"])
             I_ref, mat_ref, errs_ref = analysis.calculate_max_storage_capacity()
             fp = sum(map(lambda x: x["fp"], errs))
             fp_ref = sum(map(lambda x: x["fp"], errs_ref))
