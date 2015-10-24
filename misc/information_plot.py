@@ -91,7 +91,7 @@ figures = {}
 def cm2inch(value):
     return value / 2.54
 
-def get_figure(experiment, measure, simulator):
+def get_figure(experiment, measure, simulator, figsize=None):
     global figures
     first = False
     if not experiment in figures:
@@ -99,7 +99,9 @@ def get_figure(experiment, measure, simulator):
     if not measure in figures[experiment]:
         first = True
         figures[experiment][measure] = {}
-        fig = plt.figure(figsize=(cm2inch(8), cm2inch(6)))
+        if figsize is None:
+            figsize = (cm2inch(8), cm2inch(6))
+        fig = plt.figure(figsize=figsize)
         ax = fig.add_subplot(111)
         figures[experiment][measure]["figure"] = fig
         figures[experiment][measure]["axis"] = ax
@@ -122,7 +124,7 @@ def calc_means_stds(data, dims):
     while start < data.shape[0]:
         values = data[start, 0:dims]
         end = start + 1
-        while end < data.shape[0] and values == data[end, 0:dims]:
+        while end < data.shape[0] and np.all(values == data[end, 0:dims]):
             end = end + 1
         means[idx] = np.mean(data[start:end], 0)
         stds[idx] = np.std(data[start:end], 0)
@@ -152,6 +154,75 @@ def plot_measure(ax, xs, ys, ys_std, color, simulator, xlabel, ylabel,
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
         ax.set_ylim(bottom=0)
+
+def plot_measure2d(ax, xs, ys, zs, simulator, xlabel, ylabel):
+    _, steps_x = np.unique(xs, return_counts=True)
+    _, steps_y = np.unique(ys, return_counts=True)
+    steps_x = np.max(steps_x)
+    steps_y = np.max(steps_y)
+    xs = xs.reshape((steps_x, steps_y))
+    ys = ys.reshape((steps_x, steps_y))
+    zs = zs.reshape((steps_x, steps_y))
+#    ax.imshow(zs, origin="lower", interpolation="nearest",
+#            extent=(np.min(xs), np.max(xs),
+#            np.min(ys), np.max(ys)))
+    CS1 = ax.contourf(xs, ys, zs, cmap="Blues")
+    CS2 = ax.contour(xs, ys, zs, CS1.levels, colors='k')
+    CS2.levels = map(lambda val: '%.0f' % val, CS2.levels)
+    ax.clabel(CS2, inline=1, fontsize=8)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+
+def get_label(key):
+    key = key.strip()
+    return DIM_LABELS[key] if key in DIM_LABELS else key
+
+def plot_1d(xlabel, means, stds, simulator):
+    dims = 1
+
+    color = 'k'
+    if simulator in SIMULATOR_LABELS:
+        color = SIMULATOR_COLORS[simulator]
+        simulator = SIMULATOR_LABELS[simulator]
+
+    # Plot the information metric
+    ax, first, _ = get_figure(experiment, "info", simulator)
+    plot_measure(ax, xs=means[:, 0], ys=means[:, dims],
+            ys_std=stds[:, dims], color=color, simulator=simulator,
+            xlabel=xlabel, ylabel="Storage capacity $S$ [bit]",
+            ys_ref=means[:, dims + 1], first=first)
+
+    # Plot the number of false positives
+    ax, first, _ = get_figure(experiment, "fp", simulator)
+    plot_measure(ax, xs=means[:, 0], ys=means[:, dims + 2],
+            ys_std=stds[:, dims + 2], color=color, simulator=simulator,
+            xlabel=xlabel, ylabel="False positives $f_p$ [bit]",
+            ys_ref=means[:, dims + 3], first=first)
+
+    # Plot the number of false negatives
+    ax, first, _ = get_figure(experiment, "fn", simulator)
+    plot_measure(ax, xs=means[:, 0], ys=means[:, dims + 4],
+            ys_std=stds[:, dims + 4], color=color, simulator=simulator,
+            xlabel=xlabel, ylabel="False negatives $f_n$ [bit]",
+            first=first)
+
+    # Plot the latencies
+    ax, first, id_ = get_figure(experiment, "latency", simulator)
+    plot_measure(ax, xs=means[:, 0], ys=means[:, dims + 5],
+            ys_std=stds[:, dims + 5], color=color, simulator=simulator,
+            xlabel=xlabel, ylabel="Latency $\\delta$ [ms]",
+            first=first)
+
+def plot_2d(xlabel, ylabel, means, stds, simulator):
+    dims = 2
+
+    # Plot the information metric
+    ax, _, _ = get_figure(experiment, "info" + "_2d_" + simulator, simulator,
+            figsize=(cm2inch(11.8), cm2inch(12)))
+    plot_measure2d(ax, xs=means[:, 0], ys=means[:, 1],
+            zs=means[:, dims], simulator=simulator,
+            xlabel=xlabel, ylabel=ylabel)
+
 for target_file in sys.argv[1:]:
     print "Processing " + target_file
     results = pynam.utils.loadmat(target_file)
@@ -167,49 +238,19 @@ for target_file in sys.argv[1:]:
         data = results[experiment]["data"]
         times = results[experiment]["time"]
         simulator = results[experiment]["simulator"]
-        color = 'k'
-        if simulator in SIMULATOR_LABELS:
-            color = SIMULATOR_COLORS[simulator]
-            simulator = SIMULATOR_LABELS[simulator]
-
-        if dims != 1:
-            print "Only one-dimensional experiments are supported (yet)"
-            print "Skipping experiment " + experiment
-            continue
-
-        xlabel = keys[0]
-        if xlabel in DIM_LABELS:
-            xlabel = DIM_LABELS[xlabel]
 
         means, stds = calc_means_stds(data, dims)
 
-        # Plot the information metric
-        ax, first, _ = get_figure(experiment, "info", simulator)
-        plot_measure(ax, xs=means[:, 0], ys=means[:, dims],
-                ys_std=stds[:, dims], color=color, simulator=simulator,
-                xlabel=xlabel, ylabel="Storage capacity $S$ [bit]",
-                ys_ref=means[:, dims + 1], first=first)
-
-        # Plot the number of false positives
-        ax, first, _ = get_figure(experiment, "fp", simulator)
-        plot_measure(ax, xs=means[:, 0], ys=means[:, dims + 2],
-                ys_std=stds[:, dims + 2], color=color, simulator=simulator,
-                xlabel=xlabel, ylabel="False positives $f_p$ [bit]",
-                ys_ref=means[:, dims + 3], first=first)
-
-        # Plot the number of false negatives
-        ax, first, _ = get_figure(experiment, "fn", simulator)
-        plot_measure(ax, xs=means[:, 0], ys=means[:, dims + 4],
-                ys_std=stds[:, dims + 4], color=color, simulator=simulator,
-                xlabel=xlabel, ylabel="False negatives $f_n$ [bit]",
-                first=first)
-
-        # Plot the latencies
-        ax, first, id_ = get_figure(experiment, "latency", simulator)
-        plot_measure(ax, xs=means[:, 0], ys=means[:, dims + 5],
-                ys_std=stds[:, dims + 5], color=color, simulator=simulator,
-                xlabel=xlabel, ylabel="Latency $\\delta$ [ms]",
-                first=first)
+        if dims == 1:
+            plot_1d(xlabel=get_label(keys[0]), means=means, stds=stds,
+                    simulator=simulator)
+        elif dims == 2:
+            plot_2d(xlabel=get_label(keys[0]), ylabel=get_label(keys[1]),
+                    means=means, stds=stds, simulator=simulator)
+        else:
+            print "Only one and two-dimensional experiments are supported (yet)"
+            print "Skipping experiment " + experiment
+            continue
 
         # Plot the times
         if simulator != "ESS":
