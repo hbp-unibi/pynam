@@ -83,6 +83,8 @@ class TestExperimentDescriptor(unittest.TestCase):
                 lambda: Experiment.validate_keys(["input.blub"]))
         self.assertRaises(ExperimentException,
                 lambda: Experiment.validate_keys(["input.sigma_t.test"]))
+        self.assertRaises(ExperimentException,
+                lambda: Experiment.validate_keys(["topology.params.w"]))
 
     def test_build_parameters(self):
         experiment = Experiment()
