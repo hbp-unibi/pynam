@@ -168,10 +168,6 @@ class Experiment(dict):
         finally:
             utils.finalize_seed(old_state)
 
-        # Cap the maximum neuron count at a sane value
-        simulator_info["max_neuron_count"] = min(10000,
-                simulator_info["max_neuron_count"])
-
         # Add a dummy experiment if there are no experiments specified
         if len(self["experiments"]) == 0:
             self["experiments"] = [ExperimentDescriptor(name="eval")]
