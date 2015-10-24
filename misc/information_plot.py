@@ -156,6 +156,9 @@ def plot_measure(ax, xs, ys, ys_std, color, simulator, xlabel, ylabel,
         ax.set_ylim(bottom=0)
 
 def plot_measure2d(ax, xs, ys, zs, simulator, xlabel, ylabel):
+
+    midx = lambda m: keys.index(m)
+
     _, steps_x = np.unique(xs, return_counts=True)
     _, steps_y = np.unique(ys, return_counts=True)
     steps_x = np.max(steps_x)
@@ -163,22 +166,23 @@ def plot_measure2d(ax, xs, ys, zs, simulator, xlabel, ylabel):
     xs = xs.reshape((steps_x, steps_y))
     ys = ys.reshape((steps_x, steps_y))
     zs = zs.reshape((steps_x, steps_y))
-#    ax.imshow(zs, origin="lower", interpolation="nearest",
-#            extent=(np.min(xs), np.max(xs),
-#            np.min(ys), np.max(ys)))
-    CS1 = ax.contourf(xs, ys, zs, cmap="Blues")
-    CS2 = ax.contour(xs, ys, zs, CS1.levels, colors='k')
-    CS2.levels = map(lambda val: '%.0f' % val, CS2.levels)
+
+    levels = np.linspace(0.0, 100.0, 11) # 10% steps
+
+    CS1 = ax.contourf(xs, ys, zs, levels, cmap="Blues")
+    CS2 = ax.contour(xs, ys, zs, levels, colors='k')
+    CS2.levels = map(lambda val: '%.0f' % val, levels)
     ax.clabel(CS2, inline=1, fontsize=8)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
 
 def get_label(key):
-    key = key.strip()
     return DIM_LABELS[key] if key in DIM_LABELS else key
 
-def plot_1d(xlabel, means, stds, simulator):
+def plot_1d(xlabel, means, stds, simulator, keys):
     dims = 1
+
+    midx = lambda m: keys.index(m)
 
     color = 'k'
     if simulator in SIMULATOR_LABELS:
@@ -187,24 +191,45 @@ def plot_1d(xlabel, means, stds, simulator):
 
     # Plot the information metric
     ax, first, _ = get_figure(experiment, "info", simulator)
-    plot_measure(ax, xs=means[:, 0], ys=means[:, dims],
-            ys_std=stds[:, dims], color=color, simulator=simulator,
+    plot_measure(ax, xs=means[:, 0], ys=means[:, midx("I")],
+            ys_std=stds[:, midx("I")], color=color, simulator=simulator,
             xlabel=xlabel, ylabel="Storage capacity $S$ [bit]",
-            ys_ref=means[:, dims + 1], first=first)
+            ys_ref=means[:, midx("I_ref")], first=first)
+
+    # Plot the information metric (normalized)
+    ax, first, _ = get_figure(experiment, "info_n", simulator)
+    plot_measure(ax, xs=means[:, 0], ys=means[:, midx("I_n")] * 100.0,
+            ys_std=stds[:, midx("I_n")] * 100.0, color=color, simulator=simulator,
+            xlabel=xlabel, ylabel="Storage capacity $S$ [\\%]", first=first)
 
     # Plot the number of false positives
     ax, first, _ = get_figure(experiment, "fp", simulator)
-    plot_measure(ax, xs=means[:, 0], ys=means[:, dims + 2],
-            ys_std=stds[:, dims + 2], color=color, simulator=simulator,
+    plot_measure(ax, xs=means[:, 0], ys=means[:, midx("fp")],
+            ys_std=stds[:, midx("fp")], color=color, simulator=simulator,
             xlabel=xlabel, ylabel="False positives $f_p$ [bit]",
-            ys_ref=means[:, dims + 3], first=first)
+            ys_ref=means[:, midx("fp_ref")], first=first)
+
+    # Plot the number of false positives (normalized)
+    ax, first, _ = get_figure(experiment, "fp_n", simulator)
+    plot_measure(ax, xs=means[:, 0], ys=means[:, midx("fp_n")] * 100.0,
+            ys_std=stds[:, midx("fp_n")] * 100.0, color=color,
+            simulator=simulator,
+            xlabel=xlabel, ylabel="False positives $f_p$ [\\%]",
+            ys_ref=means[:, midx("fp_ref_n")] * 100.0, first=first)
 
     # Plot the number of false negatives
     ax, first, _ = get_figure(experiment, "fn", simulator)
-    plot_measure(ax, xs=means[:, 0], ys=means[:, dims + 4],
-            ys_std=stds[:, dims + 4], color=color, simulator=simulator,
+    plot_measure(ax, xs=means[:, 0], ys=means[:, midx("fn")],
+            ys_std=stds[:, midx("fn")], color=color, simulator=simulator,
             xlabel=xlabel, ylabel="False negatives $f_n$ [bit]",
             first=first)
+
+    # Plot the number of false negatives (normalized)
+    ax, first, _ = get_figure(experiment, "fn_n", simulator)
+    plot_measure(ax, xs=means[:, 0], ys=means[:, midx("fn_n")] * 100.0,
+            ys_std=stds[:, midx("fn_n")] * 100.0, color=color,
+            simulator=simulator, xlabel=xlabel,
+            ylabel="False negatives $f_n$ [\\%]", first=first)
 
     # Plot the latencies
     ax, first, id_ = get_figure(experiment, "latency", simulator)
@@ -213,14 +238,17 @@ def plot_1d(xlabel, means, stds, simulator):
             xlabel=xlabel, ylabel="Latency $\\delta$ [ms]",
             first=first)
 
-def plot_2d(xlabel, ylabel, means, stds, simulator):
+def plot_2d(xlabel, ylabel, means, stds, simulator, keys):
     dims = 2
+
+    midx = lambda m: keys.index(m)
+    figsize = (cm2inch(10), cm2inch(10))
 
     # Plot the information metric
     ax, _, _ = get_figure(experiment, "info" + "_2d_" + simulator, simulator,
-            figsize=(cm2inch(11.8), cm2inch(12)))
+            figsize=figsize)
     plot_measure2d(ax, xs=means[:, 0], ys=means[:, 1],
-            zs=means[:, dims], simulator=simulator,
+            zs=means[:, midx("I_n")] * 100.0, simulator=simulator,
             xlabel=xlabel, ylabel=ylabel)
 
 for target_file in sys.argv[1:]:
@@ -233,7 +261,7 @@ for target_file in sys.argv[1:]:
         if experiment.startswith("__"):
             continue
 
-        keys = results[experiment]["keys"]
+        keys = map(lambda s: s.strip(), results[experiment]["keys"].tolist())
         dims = results[experiment]["dims"]
         data = results[experiment]["data"]
         times = results[experiment]["time"]
@@ -243,10 +271,10 @@ for target_file in sys.argv[1:]:
 
         if dims == 1:
             plot_1d(xlabel=get_label(keys[0]), means=means, stds=stds,
-                    simulator=simulator)
+                    simulator=simulator, keys=keys)
         elif dims == 2:
             plot_2d(xlabel=get_label(keys[0]), ylabel=get_label(keys[1]),
-                    means=means, stds=stds, simulator=simulator)
+                    means=means, stds=stds, simulator=simulator, keys=keys)
         else:
             print "Only one and two-dimensional experiments are supported (yet)"
             print "Skipping experiment " + experiment
@@ -261,7 +289,7 @@ for target_file in sys.argv[1:]:
                 ax.set_ylabel("Simulation time $t$ [s]")
 
 # Finalize the plots, save them as PDF
-for experiment in figures:
+for i, experiment in enumerate(figures):
     for measure in figures[experiment]:
         fig = figures[experiment][measure]["figure"]
         ax = figures[experiment][measure]["axis"]
@@ -283,6 +311,6 @@ for experiment in figures:
 
         if not os.path.exists("out"):
             os.mkdirs("out")
-        fig.savefig("out/plot_" + measure + ".pdf", format='pdf',
+        fig.savefig("out/plot_" + str(i) + "_" + measure + ".pdf", format='pdf',
                 bbox_inches='tight')
 
