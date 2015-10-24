@@ -142,6 +142,13 @@ class Experiment(dict):
 
         return input_params, topology_params
 
+    @staticmethod
+    def _check_shared_parameters_equal(shared_parameters, ps1, ps2):
+        for p in shared_parameters:
+            if (p in ps1) and (p in ps2) and (ps1[p] != ps2[p]):
+                return False
+        return True
+
     def build(self, simulator_info, simulator="", seed=None):
         """
         Builds all NetworkPool instances required to conduct the specified
@@ -231,7 +238,17 @@ class Experiment(dict):
                                 < pools[target_pool_idx].neuron_count()) and 
                                  pools[l].neuron_count() + net.neuron_count()
                                     < simulator_info["max_neuron_count"]):
-                            target_pool_idx = l
+                            # If uniform parameter are required (Spikey), check
+                            # whether the target network parameters are the same
+                            # as the current network parameters
+                            if pools[l].neuron_count() > 0:
+                                if self._check_shared_parameters_equal(
+                                        simulator_info["shared_parameters"],
+                                        pools[l]["topology_params"][0]["params"],
+                                        topology_params["topology"]["params"]):
+                                    target_pool_idx = l
+                            else:
+                                target_pool_idx = l
 
                     # No free pool has been found, add a new one
                     if target_pool_idx == -1:
