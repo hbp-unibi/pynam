@@ -470,13 +470,16 @@ def finalize_analysis(result):
         if result[name]["dims"] > 0:
             sort_keys = res["data"][:, 0:result[name]["dims"]].T
             res["data"] = res["data"][np.lexsort(sort_keys)]
-        if res["data"].shape[0] == 1:
+        if res["idx"] == 1:
+            data = res["data"]
+            if len(data.shape) > 1:
+                data = data[0]
             # If there is only one result row, it is likely that we just want
             # to just evaluate the network. Print the keys and the results.
             print
             print "Results for experiment \"" + name + "\""
-            print "\t".join(res["keys"])
-            print "\t".join(map(lambda x: "%.2f" % x, res["data"][0].tolist()))
+            print "\t".join(map(lambda x: x.strip(), res["keys"]))
+            print "\t".join(map(lambda x: "%.2f" % x, data))
             print
         del res["idx"]
     return result
