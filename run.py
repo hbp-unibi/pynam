@@ -312,8 +312,14 @@ def execute_networks(input_files, simulator, analyse=False):
     logger.info("Reading input file: " + input_file)
     input_network = read_object(input_file)
 
+    # Redirect IO if the simulator is NMPM1
+    normalized_simulator = pynl.PyNNLess.normalized_simulator_name(simulator)
+    setup = {
+        "redirect_io": normalized_simulator == "nmpm1"
+    }
+
     logger.info("Run simulation...")
-    sim = pynl.PyNNLessIsolated(simulator)
+    sim = pynl.PyNNLessIsolated(simulator, setup)
     output = sim.run(input_network)
     times = sim.get_time_info()
     logger.info("Simulation took " + str(times["sim"]) + "s ("
