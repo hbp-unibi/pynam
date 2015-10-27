@@ -572,19 +572,23 @@ class NetworkInstance(dict):
                 self["mat_in"], self["mat_out"], self["input_split"])
 
     @staticmethod
-    def neuron_count_static(populations):
+    def neuron_count_static(populations, count_sources=False):
         """
         Returns the current number of neurons in in the given "populations"
         array.
         """
-        size = lambda p: 0 if p["type"] == pynl.TYPE_SOURCE else p["count"]
+        if not count_sources:
+            size = lambda p: 0 if p["type"] == pynl.TYPE_SOURCE else p["count"]
+        else:
+            size = lambda p: p["count"]
         return sum(map(lambda pop: size(pop), populations))
 
-    def neuron_count(self):
+    def neuron_count(self, count_sources=False):
         """
         Returns the current number of neurons in the network
         """
-        return NetworkInstance.neuron_count_static(self["populations"])
+        return NetworkInstance.neuron_count_static(self["populations"],
+                count_sources)
 
 class NetworkPool(dict):
     """
@@ -719,11 +723,12 @@ class NetworkPool(dict):
             last_split = split
         return res
 
-    def neuron_count(self):
+    def neuron_count(self, count_sources=False):
         """
-        Returns the current number of neurons in the pool
+        Returns the current number of neurons in the network
         """
-        return NetworkInstance.neuron_count_static(self["populations"])
+        return NetworkInstance.neuron_count_static(self["populations"],
+                count_sources)
 
 class NetworkAnalysis(dict):
     """

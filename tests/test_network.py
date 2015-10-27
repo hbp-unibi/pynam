@@ -425,9 +425,11 @@ class TestNetworkInstance(unittest.TestCase):
 
         net = builder.build()
         self.assertEqual(5, net.neuron_count())
+        self.assertEqual(10, net.neuron_count(count_sources=True))
 
         net = builder.build(topology_params={"multiplicity": 3})
         self.assertEqual(15, net.neuron_count())
+        self.assertEqual(30, net.neuron_count(count_sources=True))
 
     def test_match_negative(self):
         input_times = [[100.0], [200.0], [300.0], [400.0]]
