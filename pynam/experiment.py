@@ -172,6 +172,9 @@ class Experiment(dict):
         if len(self["experiments"]) == 0:
             self["experiments"] = [ExperimentDescriptor(name="eval")]
 
+        # "Count sources" flag
+        cs = simulator_info["sources_are_neurons"]
+
         # Create all NetworkPool instances
         pools = []
         for i, experiment in enumerate(self["experiments"]):
@@ -230,14 +233,15 @@ class Experiment(dict):
                     # space for this experiment.
                     target_pool_idx = -1
                     for l in xrange(min_pool, len(pools)):
-                        if ((target_pool_idx == -1 or pools[l].neuron_count()
-                                < pools[target_pool_idx].neuron_count()) and 
-                                 pools[l].neuron_count() + net.neuron_count()
+                        if ((target_pool_idx == -1 or pools[l].neuron_count(cs)
+                                < pools[target_pool_idx].neuron_count(cs)) and
+                                 pools[l].neuron_count(cs)
+                                    + net.neuron_count(cs)
                                     <= simulator_info["max_neuron_count"]):
                             # If uniform parameter are required (Spikey), check
                             # whether the target network parameters are the same
                             # as the current network parameters
-                            if pools[l].neuron_count() > 0:
+                            if pools[l].neuron_count(cs) > 0:
                                 if self._check_shared_parameters_equal(
                                         simulator_info["shared_parameters"],
                                         pools[l]["topology_params"][0]["params"],
@@ -262,7 +266,7 @@ class Experiment(dict):
                     local_build_seed = local_build_seed * 2
 
         # Return non-empty pool instances
-        return filter(lambda x: x.neuron_count() > 0, pools)
+        return filter(lambda x: x.neuron_count(cs) > 0, pools)
 
 class ExperimentDescriptor(dict):
 
