@@ -229,12 +229,12 @@ class NetworkBuilder:
                 n_bits = self.data_params["n_bits_in"],
                 n_ones = self.data_params["n_ones_in"],
                 n_samples = self.data_params["n_samples"],
-                seed=(seed + 5) * 1)
+                seed=None if seed is None else ((seed + 5) * 1))
             self.mat_out = data.generate(
                 n_bits = self.data_params["n_bits_out"],
                 n_ones = self.data_params["n_ones_out"],
                 n_samples = self.data_params["n_samples"],
-                seed=(seed + 5) * 2)
+                seed=None if seed is None else ((seed + 5) * 1))
 
         else:
             # If a matrices are given, derive the data parameters from those
