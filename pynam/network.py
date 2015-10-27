@@ -224,26 +224,17 @@ class NetworkBuilder:
             # Use the supplied data parameters -- generate the data matrices
             self.data_params = DataParameters(data_params)
 
-            # Set the random number generator seed and generate the data
-            old_state = utils.initialize_seed(seed, 1)
-            try:
-                self.mat_in = data.generate(
-                    n_bits = self.data_params["n_bits_in"],
-                    n_ones = self.data_params["n_ones_in"],
-                    n_samples = self.data_params["n_samples"])
-            finally:
-                utils.finalize_seed(old_state)
-
-            # Reset the random number generator seed to make sure that the first
-            # n_samples are always the same
-            old_state = utils.initialize_seed(seed, 2)
-            try:
-                self.mat_out = data.generate(
-                    n_bits = self.data_params["n_bits_out"],
-                    n_ones = self.data_params["n_ones_out"],
-                    n_samples = self.data_params["n_samples"])
-            finally:
-                utils.finalize_seed(old_state)
+            # Generate the data with a fixed seed
+            self.mat_in = data.generate(
+                n_bits = self.data_params["n_bits_in"],
+                n_ones = self.data_params["n_ones_in"],
+                n_samples = self.data_params["n_samples"],
+                seed=(seed + 5) * 1)
+            self.mat_out = data.generate(
+                n_bits = self.data_params["n_bits_out"],
+                n_ones = self.data_params["n_ones_out"],
+                n_samples = self.data_params["n_samples"],
+                seed=(seed + 5) * 2)
 
         else:
             # If a matrices are given, derive the data parameters from those

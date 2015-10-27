@@ -108,6 +108,9 @@ def _finalize_generate(old_random_state):
 # Public methods
 #
 
+# Cache containing generated data for certain parameters
+_generate_cache_ = {}
+
 def generate(n_bits, n_ones, n_samples, no_duplicates=False, seed=None,
         weight_choices=True, random=True, balance=True):
     """
@@ -140,6 +143,16 @@ def generate(n_bits, n_ones, n_samples, no_duplicates=False, seed=None,
     :param balance: If False, does not perform balancing. Default is True.
     :return: a numpy ndarray containing the samples as rows.
     """
+
+    # Try to read the generated data from the cache if it is supposed to be
+    # generated deterministically
+    global _generate_cache_
+    if (not seed is None) or (not random):
+        key = (n_bits, n_ones, n_samples, no_duplicates, weight_choices, random,
+                balance, seed)
+        if key in _generate_cache_:
+            return np.copy(_generate_cache_[key])
+
     old_random_state = _initialize_generate(n_bits, n_ones, n_samples, seed)
     try:
         res = np.zeros((n_samples, n_bits), dtype=np.uint8)
@@ -194,6 +207,10 @@ def generate(n_bits, n_ones, n_samples, no_duplicates=False, seed=None,
         return res
     finally:
         _finalize_generate(old_random_state)
+
+        # Store the generated data in the cache
+        if (not seed is None) or (not random):
+            _generate_cache_[key] = np.copy(res)
 
 def generate_naive(n_bits, n_ones, n_samples, seed=None):
     """
