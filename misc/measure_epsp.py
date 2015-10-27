@@ -95,3 +95,6 @@ scio.savemat("out/" + backend + "_epsp.mat", {
     "vs_avg": vs_avg
 })
 
+# Store the CSV version of the data
+M = np.vstack((ts_res, vs_avg)).T
+np.savetxt("out/" + backend + "_epsp.csv", M, delimiter=",")
