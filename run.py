@@ -33,6 +33,7 @@ import datetime
 
 import logging
 import subprocess
+import multiprocessing
 
 import numpy as np
 import pynam
@@ -264,9 +265,9 @@ def create_networks(experiment_file, simulator, path="", analyse=False):
 def execute_networks(input_files, simulator, analyse=False):
     # If there is more than one input_file, execute these in different processes
     if (len(input_files) > 1):
-        # Fetch the concurrency supported by the simulator
-        concurrency = (pynl.PyNNLess.get_simulator_info_static(simulator)
-                ["concurrency"])
+        # Always spawn as many child processes as CPUs. The PyNNLessIsolated
+        # class will care for serialization in the case of hardware systems.
+        concurrency = multiprocessing.cpu_count()
 
         # Assemble the processes that should be executed
         mode = "--analyse-exec" if analyse else "--exec"
@@ -312,7 +313,7 @@ def execute_networks(input_files, simulator, analyse=False):
     input_network = read_object(input_file)
 
     logger.info("Run simulation...")
-    sim = pynl.PyNNLess(simulator)
+    sim = pynl.PyNNLessIsolated(simulator)
     output = sim.run(input_network)
     times = sim.get_time_info()
     logger.info("Simulation took " + str(times["sim"]) + "s ("
