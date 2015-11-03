@@ -223,12 +223,12 @@ class TestNetworkBuilder(unittest.TestCase):
             ((4, 0), (8, 0), 0.03, 0.0)]))
         self.assertEqual(topo["populations"], [
                 {'count': 1,
-                 'params': {'spike_times': []},
+                 'params': [{'spike_times': []}],
                  'type': 'SpikeSourceArray',
                  'record': []}
             ] * 5 + [
                 {'count': 1,
-                 'params': {
+                 'params': [{
                     'tau_refrac': 0.1,
                     'tau_m': 20.0,
                     'e_rev_E': 0.0,
@@ -240,7 +240,7 @@ class TestNetworkBuilder(unittest.TestCase):
                     'v_rest': -65.0,
                     'tau_syn_I': 5.0,
                     'v_reset': -65.0
-                },
+                }],
                 'record': ['spikes'],
                 'type': 'IF_cond_exp'
                 }
@@ -365,10 +365,10 @@ class TestNetworkBuilder(unittest.TestCase):
         times = net["input_times"]
         indices = net["input_indices"]
         output_neuron = {'count': 1, 'params':
-                {'tau_refrac': 0.1, 'tau_m': 20.0, 'e_rev_E': 0.0,
+                [{'tau_refrac': 0.1, 'tau_m': 20.0, 'e_rev_E': 0.0,
                 'i_offset': 0.0, 'cm': 0.2, 'e_rev_I': -70.0,
                 'v_thresh': -50.0, 'tau_syn_E': 5.0, 'v_rest': -65.0,
-                'tau_syn_I': 5.0, 'v_reset': -65.0}, 'type':
+                'tau_syn_I': 5.0, 'v_reset': -65.0}], 'type':
                 'IF_cond_exp', 'record': ['spikes']}
         self.assertEqual({'connections': [
             ((0, 0), (6, 0), 0.03, 0.0),
@@ -383,15 +383,15 @@ class TestNetworkBuilder(unittest.TestCase):
             ((3, 0), (6, 0), 0.03, 0.0),
             ((4, 0), (7, 0), 0.03, 0.0),
             ((4, 0), (8, 0), 0.03, 0.0)], 'populations': [
-                {'count': 1, 'params': {'spike_times': [100.0]},
+                {'count': 1, 'params': [{'spike_times': [100.0]}],
                 'type': 'SpikeSourceArray', 'record': []},
-                {'count': 1, 'params': {'spike_times': [100.0]},
+                {'count': 1, 'params': [{'spike_times': [100.0]}],
                 'type': 'SpikeSourceArray', 'record': []},
-                {'count': 1, 'params': {'spike_times': [0.0, 200.0]},
+                {'count': 1, 'params': [{'spike_times': [0.0, 200.0]}],
                 'type': 'SpikeSourceArray', 'record': []},
-                {'count': 1, 'params': {'spike_times': [200.0]},
+                {'count': 1, 'params': [{'spike_times': [200.0]}],
                 'type': 'SpikeSourceArray', 'record': []},
-                {'count': 1, 'params': {'spike_times': [0.0]},
+                {'count': 1, 'params': [{'spike_times': [0.0]}],
                 'type': 'SpikeSourceArray', 'record': []},
                 output_neuron, output_neuron, output_neuron, output_neuron,
                 output_neuron]}, topo)

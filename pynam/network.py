@@ -375,7 +375,7 @@ class NetworkBuilder:
         Injects the given spike times into the network.
         """
         for i in xrange(len(times)):
-            topology["populations"][i]["params"]["spike_times"] = times[i]
+            topology["populations"][i]["params"][0]["spike_times"] = times[i]
         return topology
 
     def build(self, time_offs=0, topology_params={}, input_params={},
