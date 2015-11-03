@@ -68,8 +68,8 @@
 		{
 			"name": "Sweep $E_\\mathrm{thresh}$/$w$ for $m=n=16$, $c=d=3$",
 			"sweeps": {
-				"topology.params.v_thresh": {"min": -69, "max": -55, "count": 10},
-				"topology.w": {"min": 0.001, "max": 0.01, "count": 10}
+				"topology.params.v_thresh": {"min": -69, "max": -55, "count": 14},
+				"topology.w": {"min": 0.001, "max": 0.016, "count": 16}
 			},
 			"repeat": 1
 		}
