@@ -41,7 +41,7 @@ params = {
     "v_rest": -70,
     "v_reset": -75,
     "v_thresh": -55,
-    "tau_m": 10.0
+    "tau_m": 5.0
 }
 
 # Issue exactly one spike at t = 1000.0
@@ -50,7 +50,7 @@ spike_times = [1000.0]
 # Number of neurons for which the simulation should be performed
 neuron_count = 192
 
-weight = 0.008
+weight = 0.016
 
 # Target simulator
 backend = "spikey"
@@ -86,15 +86,14 @@ for i in xrange(neuron_count):
 
 # Calculate the average
 vs_avg = np.mean(vs_offs, 0)
+vs_median = np.median(vs_offs, 0)
 
 # Store the two matrices in the resulting matlab file
-scio.savemat("out/" + backend + "_epsp.mat", {
+scio.savemat("out/" + backend + "_epsp_gl04.mat", {
     "ts": ts_res,
     "vs": vs_res,
     "vs_offs": vs_offs,
-    "vs_avg": vs_avg
+    "vs_avg": vs_avg,
+    "vs_median": vs_median
 })
 
-# Store the CSV version of the data
-M = np.vstack((ts_res, vs_avg)).T
-np.savetxt("out/" + backend + "_epsp.csv", M, delimiter=",")
