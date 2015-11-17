@@ -223,12 +223,12 @@ class TestNetworkBuilder(unittest.TestCase):
             ((4, 0), (8, 0), 0.03, 0.0)]))
         self.assertEqual(topo["populations"], [
                 {'count': 1,
-                 'params': {'spike_times': []},
+                 'params': [{'spike_times': []}],
                  'type': 'SpikeSourceArray',
                  'record': []}
             ] * 5 + [
                 {'count': 1,
-                 'params': {
+                 'params': [{
                     'tau_refrac': 0.1,
                     'tau_m': 20.0,
                     'e_rev_E': 0.0,
@@ -240,7 +240,7 @@ class TestNetworkBuilder(unittest.TestCase):
                     'v_rest': -65.0,
                     'tau_syn_I': 5.0,
                     'v_reset': -65.0
-                },
+                }],
                 'record': ['spikes'],
                 'type': 'IF_cond_exp'
                 }
@@ -365,10 +365,10 @@ class TestNetworkBuilder(unittest.TestCase):
         times = net["input_times"]
         indices = net["input_indices"]
         output_neuron = {'count': 1, 'params':
-                {'tau_refrac': 0.1, 'tau_m': 20.0, 'e_rev_E': 0.0,
+                [{'tau_refrac': 0.1, 'tau_m': 20.0, 'e_rev_E': 0.0,
                 'i_offset': 0.0, 'cm': 0.2, 'e_rev_I': -70.0,
                 'v_thresh': -50.0, 'tau_syn_E': 5.0, 'v_rest': -65.0,
-                'tau_syn_I': 5.0, 'v_reset': -65.0}, 'type':
+                'tau_syn_I': 5.0, 'v_reset': -65.0}], 'type':
                 'IF_cond_exp', 'record': ['spikes']}
         self.assertEqual({'connections': [
             ((0, 0), (6, 0), 0.03, 0.0),
@@ -383,15 +383,15 @@ class TestNetworkBuilder(unittest.TestCase):
             ((3, 0), (6, 0), 0.03, 0.0),
             ((4, 0), (7, 0), 0.03, 0.0),
             ((4, 0), (8, 0), 0.03, 0.0)], 'populations': [
-                {'count': 1, 'params': {'spike_times': [100.0]},
+                {'count': 1, 'params': [{'spike_times': [100.0]}],
                 'type': 'SpikeSourceArray', 'record': []},
-                {'count': 1, 'params': {'spike_times': [100.0]},
+                {'count': 1, 'params': [{'spike_times': [100.0]}],
                 'type': 'SpikeSourceArray', 'record': []},
-                {'count': 1, 'params': {'spike_times': [0.0, 200.0]},
+                {'count': 1, 'params': [{'spike_times': [0.0, 200.0]}],
                 'type': 'SpikeSourceArray', 'record': []},
-                {'count': 1, 'params': {'spike_times': [200.0]},
+                {'count': 1, 'params': [{'spike_times': [200.0]}],
                 'type': 'SpikeSourceArray', 'record': []},
-                {'count': 1, 'params': {'spike_times': [0.0]},
+                {'count': 1, 'params': [{'spike_times': [0.0]}],
                 'type': 'SpikeSourceArray', 'record': []},
                 output_neuron, output_neuron, output_neuron, output_neuron,
                 output_neuron]}, topo)
@@ -418,6 +418,18 @@ class TestNetworkInstance(unittest.TestCase):
         self.assertEqual([[0.0, 100.0], [101.0], [300.0, 301.0], [200.0],
             [201.0, 101.0]], output_spikes)
         self.assertEqual([[0, 0], [1], [2, 2], [1], [2, 1]], output_indices)
+
+    def test_neuron_count(self):
+        mat_in, mat_out = test_data()
+        builder = NetworkBuilder(mat_in, mat_out)
+
+        net = builder.build()
+        self.assertEqual(5, net.neuron_count())
+        self.assertEqual(10, net.neuron_count(count_sources=True))
+
+        net = builder.build(topology_params={"multiplicity": 3})
+        self.assertEqual(15, net.neuron_count())
+        self.assertEqual(30, net.neuron_count(count_sources=True))
 
     def test_match_negative(self):
         input_times = [[100.0], [200.0], [300.0], [400.0]]
@@ -466,6 +478,14 @@ class TestNetworkPool(unittest.TestCase):
         pool.add_network(net)
         analysis_instances = pool.build_analysis(time_mux_output_data)
         test_time_mux_res(self, analysis_instances)
+
+    def test_neuron_count(self):
+        mat_in, mat_out = test_data()
+        builder = NetworkBuilder(mat_in, mat_out)
+        pool = NetworkPool()
+        pool.add_network(builder.build())
+        pool.add_network(builder.build(topology_params={"multiplicity": 3}))
+        self.assertEqual(20, pool.neuron_count())
 
     def test_add_nets_build_analysis(self):
         mat_in, mat_out = test_data()

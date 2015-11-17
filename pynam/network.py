@@ -224,26 +224,17 @@ class NetworkBuilder:
             # Use the supplied data parameters -- generate the data matrices
             self.data_params = DataParameters(data_params)
 
-            # Set the random number generator seed and generate the data
-            old_state = utils.initialize_seed(seed, 1)
-            try:
-                self.mat_in = data.generate(
-                    n_bits = self.data_params["n_bits_in"],
-                    n_ones = self.data_params["n_ones_in"],
-                    n_samples = self.data_params["n_samples"])
-            finally:
-                utils.finalize_seed(old_state)
-
-            # Reset the random number generator seed to make sure that the first
-            # n_samples are always the same
-            old_state = utils.initialize_seed(seed, 2)
-            try:
-                self.mat_out = data.generate(
-                    n_bits = self.data_params["n_bits_out"],
-                    n_ones = self.data_params["n_ones_out"],
-                    n_samples = self.data_params["n_samples"])
-            finally:
-                utils.finalize_seed(old_state)
+            # Generate the data with a fixed seed
+            self.mat_in = data.generate(
+                n_bits = self.data_params["n_bits_in"],
+                n_ones = self.data_params["n_ones_in"],
+                n_samples = self.data_params["n_samples"],
+                seed=None if seed is None else ((seed + 5) * 1))
+            self.mat_out = data.generate(
+                n_bits = self.data_params["n_bits_out"],
+                n_ones = self.data_params["n_ones_out"],
+                n_samples = self.data_params["n_samples"],
+                seed=None if seed is None else ((seed + 5) * 1))
 
         else:
             # If a matrices are given, derive the data parameters from those
@@ -384,7 +375,7 @@ class NetworkBuilder:
         Injects the given spike times into the network.
         """
         for i in xrange(len(times)):
-            topology["populations"][i]["params"]["spike_times"] = times[i]
+            topology["populations"][i]["params"][0]["spike_times"] = times[i]
         return topology
 
     def build(self, time_offs=0, topology_params={}, input_params={},
@@ -580,12 +571,24 @@ class NetworkInstance(dict):
                 self["data_params"], self["topology_params"], self["meta_data"],
                 self["mat_in"], self["mat_out"], self["input_split"])
 
-    def neuron_count(self):
+    @staticmethod
+    def neuron_count_static(populations, count_sources=False):
         """
-        Returns the current number of neurons in the pool
+        Returns the current number of neurons in in the given "populations"
+        array.
         """
-        return sum(map(lambda pop: pop["count"], self["populations"]))
+        if not count_sources:
+            size = lambda p: 0 if p["type"] == pynl.TYPE_SOURCE else p["count"]
+        else:
+            size = lambda p: p["count"]
+        return sum(map(lambda pop: size(pop), populations))
 
+    def neuron_count(self, count_sources=False):
+        """
+        Returns the current number of neurons in the network
+        """
+        return NetworkInstance.neuron_count_static(self["populations"],
+                count_sources)
 
 class NetworkPool(dict):
     """
@@ -720,11 +723,12 @@ class NetworkPool(dict):
             last_split = split
         return res
 
-    def neuron_count(self):
+    def neuron_count(self, count_sources=False):
         """
-        Returns the current number of neurons in the pool
+        Returns the current number of neurons in the network
         """
-        return sum(map(lambda pop: pop["count"], self["populations"]))
+        return NetworkInstance.neuron_count_static(self["populations"],
+                count_sources)
 
 class NetworkAnalysis(dict):
     """

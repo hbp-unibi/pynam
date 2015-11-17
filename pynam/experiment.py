@@ -87,10 +87,21 @@ class Experiment(dict):
                     + "\": Unknown parameter \"" + parts[1] + "\", known "
                     + "parameters are "
                     + str(cls.PARAMETER_PROTOTYPES[parts[0]].keys()))
-            if (len(parts) == 3 and not
-                isinstance(cls.PARAMETER_PROTOTYPES[parts[0]][parts[1]], dict)):
-                raise ExperimentException("Invalid parameter key \"" + key
-                    + "\": Parameter \"" + parts[1] + "\" is not a dictionary")
+            if len(parts) == 3:
+                if not isinstance(cls.PARAMETER_PROTOTYPES[parts[0]][parts[1]],
+                        dict):
+                    raise ExperimentException("Invalid parameter key \"" + key
+                        + "\": Parameter \"" + parts[1]
+                        + "\" is not a dictionary")
+                if (key.startswith("topology.params.") or
+                        key.startswith("topology.param_noise.")):
+                    if not parts[2] in ["cm", "tau_refrac", "v_spike",
+                            "v_reset", "v_rest", "tau_m", "i_offset", "a", "b",
+                            "delta_T", "tau_w", "v_thresh", "e_rev_E",
+                            "tau_syn_E", "e_rev_I", "tau_syn_I", "g_leak"]:
+                        raise ExperimentException("Invalid parameter key \""
+                                + key + "\": " + parts[2] + "\" is not a valid "
+                                + "neuron parameter")
 
     def build_parameters(self, experiment):
         # Build the input and topology parameters for a single experiment
@@ -131,6 +142,13 @@ class Experiment(dict):
 
         return input_params, topology_params
 
+    @staticmethod
+    def _check_shared_parameters_equal(shared_parameters, ps1, ps2):
+        for p in shared_parameters:
+            if (p in ps1) and (p in ps2) and (ps1[p] != ps2[p]):
+                return False
+        return True
+
     def build(self, simulator_info, simulator="", seed=None):
         """
         Builds all NetworkPool instances required to conduct the specified
@@ -150,13 +168,12 @@ class Experiment(dict):
         finally:
             utils.finalize_seed(old_state)
 
-        # Cap the maximum neuron count at a sane value
-        simulator_info["max_neuron_count"] = min(10000,
-                simulator_info["max_neuron_count"])
-
         # Add a dummy experiment if there are no experiments specified
         if len(self["experiments"]) == 0:
             self["experiments"] = [ExperimentDescriptor(name="eval")]
+
+        # "Count sources" flag
+        cs = simulator_info["sources_are_neurons"]
 
         # Create all NetworkPool instances
         pools = []
@@ -216,11 +233,22 @@ class Experiment(dict):
                     # space for this experiment.
                     target_pool_idx = -1
                     for l in xrange(min_pool, len(pools)):
-                        if ((target_pool_idx == -1 or pools[l].neuron_count()
-                                < pools[target_pool_idx].neuron_count()) and 
-                                 pools[l].neuron_count() + net.neuron_count()
-                                    < simulator_info["max_neuron_count"]):
-                            target_pool_idx = l
+                        if ((target_pool_idx == -1 or pools[l].neuron_count(cs)
+                                < pools[target_pool_idx].neuron_count(cs)) and
+                                 pools[l].neuron_count(cs)
+                                    + net.neuron_count(cs)
+                                    <= simulator_info["max_neuron_count"]):
+                            # If uniform parameter are required (Spikey), check
+                            # whether the target network parameters are the same
+                            # as the current network parameters
+                            if pools[l].neuron_count(cs) > 0:
+                                if self._check_shared_parameters_equal(
+                                        simulator_info["shared_parameters"],
+                                        pools[l]["topology_params"][0]["params"],
+                                        topology_params["topology"]["params"]):
+                                    target_pool_idx = l
+                            else:
+                                target_pool_idx = l
 
                     # No free pool has been found, add a new one
                     if target_pool_idx == -1:
@@ -238,7 +266,7 @@ class Experiment(dict):
                     local_build_seed = local_build_seed * 2
 
         # Return non-empty pool instances
-        return filter(lambda x: x.neuron_count() > 0, pools)
+        return filter(lambda x: x.neuron_count(cs) > 0, pools)
 
 class ExperimentDescriptor(dict):
 
