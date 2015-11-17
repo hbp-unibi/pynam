@@ -25,7 +25,6 @@ import re
 import json
 import numpy as np
 import scipy.io as scio
-import pynnless.pynnless_utils
 
 def initialize_seed(seed, seq=1):
     """
@@ -103,5 +102,9 @@ def _todict(matobj):
             dict[strg] = elem
     return dict
 
-# Forward the "init_key" method
-init_key = pynnless.pynnless_utils.init_key
+# Try to forward the "init_key" method from pynnless
+try:
+    import pynnless.pynnless_utils
+    init_key = pynnless.pynnless_utils.init_key
+except:
+    pass
