@@ -108,7 +108,7 @@ def _finalize_generate(old_random_state):
 # Public methods
 #
 
-def generate(n_bits, n_ones, n_samples, no_duplicates=False, seed=None,
+def generate(n_bits, n_ones, n_samples, abort_on_restart=False, seed=None,
         weight_choices=True, random=True, balance=True):
     """
     Generates a set of training vectors to be used in conjunction with the
@@ -120,15 +120,15 @@ def generate(n_bits, n_ones, n_samples, no_duplicates=False, seed=None,
     2. If "n_bits choose n_ones" samples are requested, all permutations of
     n_ones ones in n_bits bits will be returned. The first duplicate will be
     returned after all possible permutations have been returned. If the
-    no_duplicates flag is set, the function will abort and return a smaller than
-    requested data matrix.
+    abort_on_restart flag is set, the function will abort and return a smaller
+    than requested data matrix.
     3. The returned permutations are randomly shuffled and each sufficiently
     large block of samples will be uncorrelated.
 
     :param n_bits: is the size of the result vector.
     :param n_ones: specifies how many bits are set to one in the result vector.
     :param n_samples: number of samples to generate.
-    :param no_duplicates: if True, aborts once duplicates have to be generated.
+    :param abort_on_restart: if True, aborts once duplicates have to be generated.
     A samller data matrix than requested will be returned in this case.
     :param seed: If not "None", the random generator will be adjusted to use the
     given seed. The generator will be reset after this function ends.
@@ -184,7 +184,7 @@ def generate(n_bits, n_ones, n_samples, no_duplicates=False, seed=None,
 
                 # Abort if there are no more permutations left
                 abort = (not node.decrement_permutation(idx) and node == root
-                        and no_duplicates) or abort
+                        and abort_on_restart) or abort
 
                 # Descend into the tree
                 node = node.fetch(idx)
