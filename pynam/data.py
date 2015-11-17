@@ -257,7 +257,7 @@ def generate_random(n_bits, n_ones, n_samples, seed=None):
 if __name__ == "__main__":
     import sys
     if len(sys.argv) != 4:
-        print "./binam_data.py <BITS> <ONES> <SAMPLES>"
+        print sys.argv[0] + " <BITS> <ONES> <SAMPLES>"
         sys.exit(1)
     data = generate(int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3]))
     for row in data:
