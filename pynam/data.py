@@ -83,7 +83,7 @@ class PermutationTrieNode:
         """
         Decrements the permutation counter for sequence continuing with "idx".
         """
-        self.permutations[idx] = self.permutations[idx] - 1
+        self.permutations[idx] = self.permutations[idx] - np.uint64(1)
         if (np.max(self.permutations) == 0):
             self.permutations = self.max_permutations.copy()
             return False
