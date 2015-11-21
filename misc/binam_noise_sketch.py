@@ -59,12 +59,24 @@ M = binam.BiNAM(n_bits, n_bits)
 M.train_matrix(X, Y)
 
 print("Running experiments...")
-xs = np.linspace(0.0, 1.0, 100)
+xs = np.linspace(0.0, 1.0, 10)
 nxs = len(xs)
+
 info_p0_fix = np.zeros(nxs)
 info_p1_fix = np.zeros(nxs)
 info_p0_adap = np.zeros(nxs)
 info_p1_adap = np.zeros(nxs)
+
+fps_p0_fix = np.zeros((nxs, n_samples))
+fps_p1_fix = np.zeros((nxs, n_samples))
+fps_p0_adap = np.zeros((nxs, n_samples))
+fps_p1_adap = np.zeros((nxs, n_samples))
+
+fns_p0_fix = np.zeros((nxs, n_samples))
+fns_p1_fix = np.zeros((nxs, n_samples))
+fns_p0_adap = np.zeros((nxs, n_samples))
+fns_p1_adap = np.zeros((nxs, n_samples))
+
 i = 0
 for p in xs:
     print("Iteration: ", p)
@@ -78,22 +90,33 @@ for p in xs:
     Y_part_out_p1_fix = M.evaluate_matrix(X_part_p1, threshold=n_ones)
 
     # Calculate the errors and the entropy
-    info_p0_adap[i] = entropy.entropy_hetero(entropy.calculate_errs(
-            Y_part_out_p0_adap, Y), n_bits_out=n_bits, n_ones_out=n_ones)
-    info_p1_adap[i] = entropy.entropy_hetero(entropy.calculate_errs(
-            Y_part_out_p1_adap, Y), n_bits_out=n_bits, n_ones_out=n_ones)
-    info_p0_fix[i] = entropy.entropy_hetero(entropy.calculate_errs(
-            Y_part_out_p0_fix, Y), n_bits_out=n_bits, n_ones_out=n_ones)
-    info_p1_fix[i] = entropy.entropy_hetero(entropy.calculate_errs(
-            Y_part_out_p1_fix, Y), n_bits_out=n_bits, n_ones_out=n_ones)
+    errs = entropy.calculate_errs(Y_part_out_p0_adap, Y)
+    info_p0_adap[i] = entropy.entropy_hetero(errs, n_bits_out=n_bits, n_ones_out=n_ones)
+    fps_p0_adap[i] = np.array(map(lambda x: x["fp"], errs))
+    fns_p0_adap[i] = np.array(map(lambda x: x["fn"], errs))
+
+    errs = entropy.calculate_errs(Y_part_out_p1_adap, Y)
+    info_p1_adap[i] = entropy.entropy_hetero(errs, n_bits_out=n_bits, n_ones_out=n_ones)
+    fps_p1_adap[i] = np.array(map(lambda x: x["fp"], errs))
+    fns_p1_adap[i] = np.array(map(lambda x: x["fn"], errs))
+
+    errs = entropy.calculate_errs(Y_part_out_p0_fix, Y)
+    info_p0_fix[i] = entropy.entropy_hetero(errs, n_bits_out=n_bits, n_ones_out=n_ones)
+    fps_p0_fix[i] = np.array(map(lambda x: x["fp"], errs))
+    fns_p0_fix[i] = np.array(map(lambda x: x["fn"], errs))
+
+    errs = entropy.calculate_errs(Y_part_out_p1_fix, Y)
+    info_p1_fix[i] = entropy.entropy_hetero(errs, n_bits_out=n_bits, n_ones_out=n_ones)
+    fps_p1_fix[i] = np.array(map(lambda x: x["fp"], errs))
+    fns_p1_fix[i] = np.array(map(lambda x: x["fn"], errs))
 
     i = i + 1
 
 figsize = (cm2inch(12.8), cm2inch(6))
 
 print("Plotting information...")
-fig = plt.figure(figsize=figsize)
-ax = fig.add_subplot(1, 1, 1)
+figInfo = plt.figure(figsize=figsize)
+ax = figInfo.add_subplot(1, 1, 1)
 ax.plot(xs, info_p0_adap, lw=0.75, color="k", label="Missing bits ($p_0$)")
 ax.plot(xs, info_p1_adap, '--', lw=0.75, color="k", label="Additional bits ($p_1$)")
 ax.plot(xs, info_p0_fix, lw=0.75, color="#3465a4")
@@ -102,5 +125,27 @@ ax.set_xlabel("Noise $p$")
 ax.set_ylabel("Information [bits]")
 ax.legend(loc='lower center', bbox_to_anchor=(0.5, 1.05), ncol=4)
 
-fig.savefig("out/sketch_info_over_noise.pdf", format='pdf', bbox_inches='tight')
+print("Plotting false positives...")
+figFP = plt.figure(figsize=figsize)
+ax = figFP.add_subplot(1, 1, 1)
+ax.plot(xs, np.mean(fps_p0_adap, 1), lw=0.75, color="k", label="Missing bits ($p_0$)")
+ax.plot(xs, np.mean(fps_p1_adap, 1), '--', lw=0.75, color="k", label="Additional bits ($p_1$)")
+ax.plot(xs, np.mean(fps_p0_fix, 1), lw=0.75, color="#3465a4")
+ax.plot(xs, np.mean(fps_p1_fix, 1), '--', lw=0.75, color="#3465a4")
+ax.set_xlabel("Noise $p$")
+ax.set_ylabel("False positives [bits]")
+
+print("Plotting false negatives...")
+figFN = plt.figure(figsize=figsize)
+ax = figFN.add_subplot(1, 1, 1)
+ax.plot(xs, np.mean(fns_p0_adap, 1), lw=0.75, color="k", label="Missing bits ($p_0$)")
+ax.plot(xs, np.mean(fns_p1_adap, 1), '--', lw=0.75, color="k", label="Additional bits ($p_1$)")
+ax.plot(xs, np.mean(fns_p0_fix, 1), lw=0.75, color="#3465a4")
+ax.plot(xs, np.mean(fns_p1_fix, 1), '--', lw=0.75, color="#3465a4")
+ax.set_xlabel("Noise $p$")
+ax.set_ylabel("False negatives [bits]")
+
+figInfo.savefig("out/sketch_info_over_noise.pdf", format='pdf', bbox_inches='tight')
+figFP.savefig("out/sketch_fps_over_noise.pdf", format='pdf', bbox_inches='tight')
+figFN.savefig("out/sketch_fns_over_noise.pdf", format='pdf', bbox_inches='tight')
 
