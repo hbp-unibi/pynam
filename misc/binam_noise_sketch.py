@@ -59,7 +59,7 @@ M = binam.BiNAM(n_bits, n_bits)
 M.train_matrix(X, Y)
 
 print("Running experiments...")
-xs = np.linspace(0.0, 1.0, 10)
+xs = np.linspace(0.0, 1.0, 100)
 nxs = len(xs)
 
 info_p0_fix = np.zeros(nxs)
