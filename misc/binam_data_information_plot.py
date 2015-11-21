@@ -32,23 +32,22 @@ import __main__
 sys.path.append(os.path.join(os.path.dirname(__main__.__file__), "../pynam"))
 
 import binam
-import binam_data
-import binam_utils
+import entropy
 
 colors = [
-    '#800000', # 0
-    '#47294F', # 1
-    '#193A6B', # 2
-    '#A08300', # 3
-    '#AA4C00', # 4
-    '#193A6B', # 5
-    '#800000', # 6
-    '#AA4C00', # 7
-    '#3C7705', # 9
-    '#800000', # 10
-    '#47294F', # 11
-    '#3C7705', # 12
-    '#A08300', # 13
+    '#a40000', # 0
+    '#5c3566', # 1
+    '#204a87', # 2
+    '#c4a000', # 3
+    '#ce5c00', # 4
+    '#204a87', # 5
+    '#a40000', # 6
+    '#ce5c00', # 7
+    '#4e9a06', # 9
+    '#a40000', # 10
+    '#5c3566', # 11
+    '#4e9a06', # 12
+    '#c4a000', # 13
 ]
 
 title_rewrites = {
@@ -103,19 +102,19 @@ def plot(results, datasets):
 
     refInfo = np.zeros(len(t))
     for i in xrange(1, len(t)):
-        refInfo[i] = binam_utils.expected_entropy(t[i], results["n_bits"],
+        refInfo[i] = entropy.expected_entropy(t[i], results["n_bits"],
             results["n_ones"])
     plt.plot(t, refInfo, '--', color='k', lw=0.5, zorder=2)
 
-    color='#2e3436'
-    p1 = mlines.Line2D([], [], linestyle=':', color=color, lw=0.5)
-    p2 = mlines.Line2D([], [], linestyle='--', color='k', lw=0.5)
-    p3 = mpatches.Patch(color=color, alpha=0.3)
-    p4 = mpatches.Patch(color=color, alpha=0.15)
-    legend_elems = legend_elems + [p1, p2, p3, p4]
-    legend_labels = legend_labels + ["Trial with max. information",
-        "Expected information", "$25/75\%$-quantile", "Min./Max."]
-    legend_elems, legend_labels = reorder_legend(legend_elems, legend_labels)
+#    color='#2e3436'
+#    p1 = mlines.Line2D([], [], linestyle=':', color=color, lw=0.5)
+#    p2 = mlines.Line2D([], [], linestyle='--', color='k', lw=0.5)
+#    p3 = mpatches.Patch(color=color, alpha=0.3)
+#    p4 = mpatches.Patch(color=color, alpha=0.15)
+#    legend_elems = legend_elems + [p1, p2, p3, p4]
+#    legend_labels = legend_labels + ["Trial with max. information",
+#        "Expected information", "$25/75\%$-quantile", "Min./Max."]
+#    legend_elems, legend_labels = reorder_legend(legend_elems, legend_labels)
 
     plt.legend(legend_elems, legend_labels, loc='lower center',
         bbox_to_anchor=(0.5, 1.05), ncol=2)
