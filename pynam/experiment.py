@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+	# -*- coding: utf-8 -*-
 
 #   PyNAM -- Python Neural Associative Memory Simulator and Evaluator
 #   Copyright (C) 2015 Andreas Stöckel
@@ -209,11 +209,19 @@ class Experiment(dict):
             # Repeat the experiment as many times as specified in the "repeat"
             # parameter
             local_build_seed = build_seed
+            net_idx = 0
             for j in xrange(experiment["repeat"]):
                 # Create a random permutation of the topology parameters list
                 perm = range(0, len(topology_params_list))
                 random.shuffle(perm)
                 for k in xrange(len(topology_params_list)):
+                    # Print the current network number
+                    net_idx = net_idx + 1
+                    if (net_idx % 100 == 0):
+                        n_nets = len(topology_params_list) * experiment["repeat"]
+                        print("Generating network " + str(net_idx) + "/" +
+                            str(n_nets))
+
                     # Create a build instance coupled with the topology
                     # parameters
                     topology_params = topology_params_list[perm[k]]
