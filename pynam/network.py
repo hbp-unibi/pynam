@@ -145,6 +145,29 @@ class TopologyParameters(dict):
     the neuron multiplicity, neuron parameters and neuron parameter noise.
     """
 
+    @staticmethod
+    def _restore_alternatives(sanitised, original):
+        """
+        PyNAM allows to sweep over either g_leak or tau_m even if the neuron
+        type does not explicitly support one of these parameters. This method
+        makes sure the user-supplied values are restored, after
+        merge_default_parameters may have deleted them.
+
+        :param sanitised: result of a call to merge_default_parameters
+        :param original: original parameters
+        """
+        if ((("g_leak" in original) and ("tau_m" in original)) or
+                (("g_leak" in sanitised) and ("tau_m" in sanitised))):
+            return sanitised
+        if ("g_leak" in original) and ("tau_m" in sanitised):
+            sanitised["g_leak"] = original["g_leak"]
+            del sanitised["tau_m"]
+        if ("tau_m" in original) and ("g_leak" in sanitised):
+            sanitised["tau_m"] = original["tau_m"]
+            del sanitised["g_leak"]
+        return sanitised
+
+
     def __init__(self, data={}, params={}, param_noise={}, multiplicity=1,
             neuron_type=pynl.TYPE_IF_COND_EXP, w=0.03, sigma_w=0.0):
         """
@@ -168,8 +191,9 @@ class TopologyParameters(dict):
         utils.init_key(self, data, "w", w)
         utils.init_key(self, data, "sigma_w", sigma_w)
 
-        self["params"] = pynl.PyNNLess.merge_default_parameters(
-                self["params"], self["neuron_type"])
+        self["params"] = self._restore_alternatives(
+                pynl.PyNNLess.merge_default_parameters(self["params"],
+                        self["neuron_type"]), self["params"])
 
     def draw(self):
         res = dict(self["params"])
