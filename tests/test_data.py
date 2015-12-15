@@ -107,8 +107,8 @@ class TestGenerate(unittest.TestCase):
             [0, 0, 0, 1, 1, 1]], dtype=np.uint8)
         numpy.testing.assert_equal(res, expected)
 
-    def test_generate_all_multiple_no_duplicates(self):
-        res = generate(6, 3, 40, no_duplicates=True)
+    def test_generate_all_multiple_abort_on_restart(self):
+        res = generate(6, 3, 40, abort_on_restart=True)
         res = res[np.lexsort(res.T)]
         expected = np.array([
             [1, 1, 1, 0, 0, 0],
@@ -145,11 +145,11 @@ class TestGenerate(unittest.TestCase):
     def test_seed(self):
         np.random.seed(123412845)
         a1 = np.random.randint(1000000)
-        res1 = generate(128, 3, 100, no_duplicates=True, seed=1423452)
+        res1 = generate(128, 3, 100, abort_on_restart=True, seed=1423452)
         a2 = np.random.randint(1000000)
-        res2 = generate(128, 3, 100, no_duplicates=True, seed=1423452)
+        res2 = generate(128, 3, 100, abort_on_restart=True, seed=1423452)
         a3 = np.random.randint(1000000)
-        res3 = generate(128, 3, 100, no_duplicates=True)
+        res3 = generate(128, 3, 100, abort_on_restart=True)
         a4 = np.random.randint(1000000)
         self.assertTrue(np.all(res1 == res2))
         self.assertFalse(np.all(res1 == res3))
