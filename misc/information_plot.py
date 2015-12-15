@@ -98,7 +98,7 @@ figures = {}
 def cm2inch(value):
     return value / 2.54
 
-def get_figure(experiment, measure, simulator, figsize=None):
+def get_figure(experiment, measure, simulator, figsize=None, bottomax=False):
     global figures
     first = False
     if not experiment in figures:
@@ -107,9 +107,14 @@ def get_figure(experiment, measure, simulator, figsize=None):
         first = True
         figures[experiment][measure] = {}
         if figsize is None:
-            figsize = (cm2inch(8), cm2inch(6))
+            figsize = (cm2inch(10), cm2inch(9.5))
         fig = plt.figure(figsize=figsize)
-        ax = fig.add_subplot(111)
+        if not bottomax:
+            ax = fig.add_subplot(111)
+        else:
+            ax1 = fig.add_axes([0.0, 0.15, 1.0, 0.85])
+            ax2 = fig.add_axes([0.0, 0.0, 1.0, 0.05])
+            ax = (ax1, ax2)
         figures[experiment][measure]["figure"] = fig
         figures[experiment][measure]["axis"] = ax
         figures[experiment][measure]["count"] = 0
@@ -162,10 +167,13 @@ def plot_measure(ax, xs, ys, ys_std, color, simulator, xlabel, ylabel,
         ax.set_ylabel(ylabel)
         ax.set_ylim(bottom=0)
 
-def plot_measure2d(ax, xs, ys, zs, simulator, xlabel, ylabel, vmin=None,
-        vmax=None, fmt='%.0f\\%%'):
+def plot_measure2d(ax, xs, ys, zs, simulator, xlabel, ylabel, zlabel="", vmin=None,
+        vmax=None, qualitative=False):
 
     midx = lambda m: keys.index(m)
+
+    ax1 = ax[0]
+    ax2 = ax[1]
 
     _, steps_x = np.unique(xs, return_counts=True)
     _, steps_y = np.unique(ys, return_counts=True)
@@ -174,6 +182,17 @@ def plot_measure2d(ax, xs, ys, zs, simulator, xlabel, ylabel, vmin=None,
     xs = xs.reshape((steps_x, steps_y))
     ys = ys.reshape((steps_x, steps_y))
     zs = zs.reshape((steps_x, steps_y))
+
+    # Select the colormap
+    if qualitative:
+        cmap = "rainbow"
+    else:
+        if vmax is None:
+            cmap = "Greens"
+        else:
+            cmap = "Purples"
+        if vmin < 0.0:
+            cmap = "PuOr"
 
     # Auto-scale
     idcs = zs != np.inf
@@ -184,19 +203,22 @@ def plot_measure2d(ax, xs, ys, zs, simulator, xlabel, ylabel, vmin=None,
     if vmax is None:
         vmax = np.max(zs[idcs])
 
-    # Select the colormap
-    cmap = "Purples"
-    if vmin < 0.0:
-        cmap = "PuOr"
+    extent = (np.min(xs), np.max(xs), np.min(ys), np.max(ys))
+    ax1.imshow(zs, aspect='auto', origin='lower', extent=extent, cmap=cmap,
+            vmin=vmin, vmax=vmax, interpolation="none")
 
-    steps = math.pow(10.0, round(math.log10(vmax - vmin)) - 1.0)
-    levels = np.arange(vmin, vmax, steps)
-    CS1 = ax.contourf(xs, ys, zs, levels, cmap=cmap, vmin=vmin, vmax=vmax)
-    CS2 = ax.contour(xs, ys, zs, levels, colors='k')
-    CS2.levels = map(lambda val: fmt % val, levels)
-    ax.clabel(CS2, inline=1, fontsize=8)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
+    levels = np.linspace(vmin, vmax, 11)
+    CS2 = ax1.contour(xs, ys, zs, levels, linewidths=0.25, colors='k',
+            vmin=vmin, vmax=vmax)
+    ax1.grid()
+    ax1.set_xlabel(xlabel)
+    ax1.set_ylabel(ylabel)
+
+    cbar = matplotlib.colorbar.ColorbarBase(ax2, cmap=cmap,
+            orientation='horizontal', ticks=levels,
+            norm=matplotlib.colors.Normalize(vmin, vmax))
+    cbar.set_label(zlabel)
+
 
 def get_label(key):
     return DIM_LABELS[key] if key in DIM_LABELS else key
@@ -273,42 +295,51 @@ def plot_2d(xlabel, ylabel, means, stds, simulator, keys):
     dims = 2
 
     midx = lambda m: keys.index(m)
-    figsize = (cm2inch(10), cm2inch(10))
+    figsize = (cm2inch(10), cm2inch(9.5))
 
     # Plot the information metric
     if "I_n" in keys:
         ax, _, _ = get_figure(experiment, "info_n" + "_2d_" + simulator,
-                simulator, figsize=figsize)
+                simulator, figsize=figsize, bottomax=True)
         plot_measure2d(ax, xs=means[:, 0], ys=means[:, 1],
-                zs=means[:, midx("I_n")] * 100.0, simulator=simulator,
-                xlabel=xlabel, ylabel=ylabel, vmin=0.0, vmax=100.0)
+                zs=means[:, midx("I_n")], simulator=simulator,
+                qualitative=True,
+                zlabel="Realative information $I$",
+                xlabel=xlabel, ylabel=ylabel, vmin=0.0, vmax=1.0)
 
     # Plot the false positives metric
     if ("fp_n" in keys) and ("fp_ref_n" in keys):
         ax, _, _ = get_figure(experiment, "fp_n" + "_2d_" + simulator,
-                simulator, figsize=figsize)
+                simulator, figsize=figsize, bottomax=True)
+        zs_ref = means[:, midx("fp_ref_n")]
+        zs = means[:, midx("fp_n")] - zs_ref
+        zs[zs > 0] = zs[zs > 0] / (1 - zs_ref[zs > 0])
+        zs[zs < 0] = zs[zs < 0] / zs_ref[zs < 0]
         plot_measure2d(ax, xs=means[:, 0], ys=means[:, 1],
-                zs=(means[:, midx("fp_n")] - means[:, midx("fp_ref_n")]) * 100,
+                zs=zs,
                 simulator=simulator, xlabel=xlabel, ylabel=ylabel,
-                vmin=-100.0, vmax=100.0)
+                zlabel="Normalised false positive count",
+                vmin=-1.0, vmax=1.0)
 
     # Plot the false negatives metric
     if "fn_n" in keys:
         ax, _, _ = get_figure(experiment, "fn_n" + "_2d_" + simulator,
-                simulator, figsize=figsize)
+                simulator, figsize=figsize, bottomax=True)
         plot_measure2d(ax, xs=means[:, 0], ys=means[:, 1],
-                zs=means[:, midx("fn_n")] * 100.0,
+                zs=means[:, midx("fn_n")],
                 simulator=simulator, xlabel=xlabel, ylabel=ylabel,
-                vmin=0.0, vmax=100.0)
+                zlabel="Normalised false negative count",
+                vmin=0.0, vmax=1.0)
 
     # Plot the latency metric
     if "lat_avg" in keys:
         ax, _, _ = get_figure(experiment, "lat_avg" + "_2d_" + simulator,
-                simulator, figsize=figsize)
+                simulator, figsize=figsize, bottomax=True)
         plot_measure2d(ax, xs=means[:, 0], ys=means[:, 1],
                 zs=means[:, midx("lat_avg")],
-                simulator=simulator, xlabel=xlabel, ylabel=ylabel, vmin=0.0,
-                fmt="%.2f")
+                simulator=simulator, xlabel=xlabel, ylabel=ylabel,
+                zlabel="Average latency $\delta$ [ms]",
+                vmin=0.0)
 
 #
 # Main entry point
@@ -359,6 +390,8 @@ for i, experiment in enumerate(figures):
         count = figures[experiment][measure]["count"]
         simulators = figures[experiment][measure]["simulators"]
 
+        if isinstance(ax, tuple):
+            ax = ax[0]
         ax.set_title(experiment)
         if measure == "times":
             ax.set_xticks(np.arange(count) + 0.175)
