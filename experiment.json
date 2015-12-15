@@ -14,11 +14,10 @@
 			"e_rev_E": 0.0,
 			"e_rev_I": -70.0,
 			"v_rest": -70.0,
-			"v_reset": -78.0,
+			"v_reset": -80.0,
 			"v_thresh": -54.0,
 			"tau_syn_E": 5.0,
 			"tau_syn_I": 5.0,
-			"tau_w": 144.0,
 			"tau_refrac": 0.0,
 			"g_leak": 0.05,
 			"cm": 1.0
