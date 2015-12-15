@@ -59,8 +59,8 @@
 		{
 			"name": "NEST full network evaluation (LIF neuron)",
 			"sweeps": {
-				"topology.params.v_thresh": {"min": -30.0, "max": -10.0, "count": 32},
-				"topology.w": {"min": 0.1, "max": 0.4, "count": 32}
+				"topology.params.v_thresh": {"min": -30.0, "max": -10.0, "count": 64},
+				"topology.w": {"min": 0.1, "max": 0.4, "count": 64}
 			},
 			"repeat": 1
 		}
