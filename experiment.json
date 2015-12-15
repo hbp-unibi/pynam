@@ -2,46 +2,36 @@
  * Demo experiment
  */
 {
-	/*
-	 * The data parameters implicitly specify the size of the network
-	 */
 	"data": {
-		"n_bits_in": 16,
-		"n_bits_out": 16, // Corresponds to the number of neurons
+		"n_bits_in": 8,
+		"n_bits_out": 8,
 		"n_ones_in": 3,
 		"n_ones_out": 3
-//		"n_samples": 100 // The number of samples is automatically determined
 	},
 
-	/**
-	 * Network topology and neuron parameters
-	 */
 	"topology": {
 		"params": {
-			"cm": 0.2,
-			"e_rev_E": 0,
-			"v_rest": -70,
-			"v_reset": -75,
-			"v_thresh": -55,
-			"tau_m": 10.0
-		},
-		"multiplicity": 1, // Size of a neuron population
-		"param_noise": {
-			// Specify noise parameters here
+			"e_rev_E": 0.0,
+			"e_rev_I": -70.0,
+			"v_rest": -70.0,
+			"v_reset": -78.0,
+			"v_thresh": -54.0,
+			"tau_syn_E": 5.0,
+			"tau_syn_I": 5.0,
+			"tau_w": 144.0,
+			"tau_refrac": 0.0,
+			"g_leak": 0.05,
+			"cm": 1.0
 		},
 		"neuron_type": "IF_cond_exp",
-		"w": 0.01,
-		"sigma_w": 0.0
+		"w": 0.03
 	},
 
-	/**
-	 * Input data specification
-	 */
 	"input": {
 		"burst_size": 1,
-		"time_window": 500.0,
-		"isi": 10.0,
-		"sigma_t": 2.0,
+		"time_window": 200.0,
+		"isi": 2.0,
+		"sigma_t": 5.0,
 		"sigma_t_offs": 0.0,
 		"p0": 0.0,
 		"p1": 0.0
@@ -58,18 +48,19 @@
 	 * Experiments to be conducted
 	 */
 	"experiments": [
-/*		{
-			"name": "Sweep $\\sigma t$ for $m=n=16$, $c=d=3$",
-			"sweeps": {
-				"input.sigma_t": {"min": 0.0, "max": 10.0, "count": 20}
-			},
-			"repeat": 10
-		}*/
 		{
-			"name": "Sweep $E_\\mathrm{thresh}$/$w$ for $m=n=16$, $c=d=3$",
+			"name": "NEST full network evaluation (LIF neuron)",
 			"sweeps": {
-				"topology.params.v_thresh": {"min": -69, "max": -55, "count": 14},
-				"topology.w": {"min": 0.001, "max": 0.016, "count": 16}
+				"topology.params.g_leak": {"min": 0.001, "max": 0.2, "count": 32},
+				"topology.params.tau_syn_E": {"min": 1.0, "max": 20.0, "count": 32}
+			},
+			"repeat": 1
+		},
+		{
+			"name": "NEST full network evaluation (LIF neuron)",
+			"sweeps": {
+				"topology.params.v_thresh": {"min": -30.0, "max": -10.0, "count": 32},
+				"topology.w": {"min": 0.1, "max": 0.4, "count": 32}
 			},
 			"repeat": 1
 		}
