@@ -231,7 +231,7 @@ def create_networks(experiment_file, simulator, path="", analyse=False):
 
     # Read the experiment
     experiment = read_experiment(experiment_file)
-    experiment_name = experiment_file
+    experiment_name = os.path.basename(experiment_file)
     if experiment_name.find('.') > -1:
         experiment_name = experiment_name[0:experiment_name.find('.')]
 
@@ -562,6 +562,7 @@ elif mode == "process" or mode == "process-keep":
         sys.exit(1)
 
     # Assemble the name of the target HDF5 file
+    experiment = os.path.basename(experiment)
     if experiment.endswith(".json"):
         experiment = experiment[:-5]
     target = date_prefix + "_" + simulator + "_" + experiment + ".mat"
