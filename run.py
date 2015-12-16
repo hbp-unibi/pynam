@@ -316,7 +316,8 @@ def execute_networks(input_files, simulator, analyse=False):
     # Redirect IO if the simulator is NMPM1
     normalized_simulator = pynl.PyNNLess.normalized_simulator_name(simulator)
     setup = {
-        "redirect_io": normalized_simulator == "nmpm1"
+        "redirect_io": True,#normalized_simulator == "nmpm1"
+        "summarise_io": True
     }
 
     logger.info("Run simulation...")
