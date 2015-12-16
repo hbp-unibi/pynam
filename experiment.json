@@ -3,8 +3,8 @@
  */
 {
 	"data": {
-		"n_bits_in": 8,
-		"n_bits_out": 8,
+		"n_bits_in": 16,
+		"n_bits_out": 16,
 		"n_ones_in": 3,
 		"n_ones_out": 3
 	},
@@ -48,7 +48,7 @@
 	 */
 	"experiments": [
 		{
-			"name": "NEST full network evaluation (LIF neuron), 1",
+			"name": "Sweep $g_\\mathrm{L}$, $\\tau_\\mathrm{e}$",
 			"sweeps": {
 				"topology.params.g_leak": {"min": 0.001, "max": 0.2, "count": 64},
 				"topology.params.tau_syn_E": {"min": 1.0, "max": 20.0, "count": 64}
@@ -56,7 +56,7 @@
 			"repeat": 1
 		},
 		{
-			"name": "NEST full network evaluation (LIF neuron), 2",
+			"name": "Sweep $E_\\mathrm{Th}$, $w$",
 			"sweeps": {
 				"topology.params.v_thresh": {"min": -30.0, "max": -10.0, "count": 64},
 				"topology.w": {"min": 0.1, "max": 0.4, "count": 64}
