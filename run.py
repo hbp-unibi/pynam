@@ -573,13 +573,22 @@ elif mode == "process" or mode == "process-keep":
     else:
         analyse_output_files(output_files, target, "out")
 
-    # Remove the partial output files (no longer needed)
+    # Remove the partial input and output files (no longer needed)
     if not keep:
+        for input_file in input_files:
+            try:
+                os.remove(input_file)
+            except:
+                logger.warn("Error while deleting " + input_file)
         for output_file in output_files:
             try:
                 os.remove(output_file)
             except:
                 logger.warn("Error while deleting " + output_file)
+        try:
+            os.rmdir(folder)
+        except:
+            logger.warn("Error while deleting " + folder)
 
 logger.info("Done.")
 sys.exit(0)
