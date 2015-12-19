@@ -50,7 +50,7 @@
 			"repeat": 8
 		},
 		{
-			"name": "Spike time noise $\\sigma t$ sweep",
+			"name": "Spike weight noise $\\sigma t$ sweep",
 			"sweeps": {
 				"topology.sigma_w": {"min": 0.0, "max": 0.01, "count": 50},
 			},
