@@ -45,21 +45,21 @@
 		{
 			"name": "Spike time noise $\\sigma t$ sweep",
 			"sweeps": {
-				"input.sigma_t": {"min": 0.0, "max": 20.0, "count": 50},
+				"input.sigma_t": {"min": 0.0, "max": 20.0, "count": 50}
 			},
 			"repeat": 8
 		},
 		{
 			"name": "Spike weight noise $\\sigma t$ sweep",
 			"sweeps": {
-				"topology.sigma_w": {"min": 0.0, "max": 0.01, "count": 50},
+				"topology.sigma_w": {"min": 0.0, "max": 0.01, "count": 50}
 			},
 			"repeat": 8
 		},
 		{
 			"name": "Time window $T$ sweep",
 			"sweeps": {
-				"input.time_window": {"min": 1.0, "max": 20.0, "count": 50},
+				"input.time_window": {"min": 1.0, "max": 20.0, "count": 50}
 			},
 			"repeat": 8
 		}
