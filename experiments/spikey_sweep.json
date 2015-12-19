@@ -44,10 +44,10 @@
 		{
 			"name": "Sweep $E_\\mathrm{Th}$, $w$",
 			"sweeps": {
-				"topology.params.v_thresh": {"min": -75.0, "max": -55.0, "count": 64},
+				"topology.params.v_thresh": {"min": -69.0, "max": -55.0, "count": 64},
 				"topology.w": {"min": 0.0, "max": 0.016, "count": 64}
 			},
-			"repeat": 3
+			"repeat": 1
 		}
 	]
 }
