@@ -1,6 +1,3 @@
-/**
- * Demo experiment
- */
 {
 	"data": {
 		"n_bits_in": 16,
@@ -12,25 +9,23 @@
 	"topology": {
 		"params": {
 			"e_rev_E": 0.0,
-			"e_rev_I": -70.0,
 			"v_rest": -70.0,
 			"v_reset": -80.0,
-			"v_thresh": -54.0,
-			"tau_syn_E": 5.0,
-			"tau_syn_I": 5.0,
+			"v_thresh": -55.0,
+			"tau_syn_E": 2.0,
 			"tau_refrac": 0.0,
-			"g_leak": 0.05,
-			"cm": 1.0
+			"g_leak": 0.02,
+			"cm": 0.2
 		},
 		"neuron_type": "IF_cond_exp",
-		"w": 0.03
+		"w": 0.016
 	},
 
 	"input": {
 		"burst_size": 1,
-		"time_window": 200.0,
+		"time_window": 100.0,
 		"isi": 2.0,
-		"sigma_t": 5.0,
+		"sigma_t": 2.0,
 		"sigma_t_offs": 0.0,
 		"p0": 0.0,
 		"p1": 0.0
@@ -48,20 +43,25 @@
 	 */
 	"experiments": [
 		{
-			"name": "Sweep $g_\\mathrm{L}$, $\\tau_\\mathrm{e}$",
+			"name": "Spike time noise $\\sigma t$ sweep",
 			"sweeps": {
-				"topology.params.g_leak": {"min": 0.001, "max": 0.2, "count": 64},
-				"topology.params.tau_syn_E": {"min": 1.0, "max": 20.0, "count": 64}
+				"input.sigma_t": {"min": 0.0, "max": 20.0, "count": 50}
 			},
-			"repeat": 1
+			"repeat": 8
 		},
 		{
-			"name": "Sweep $E_\\mathrm{Th}$, $w$",
+			"name": "Spike time noise $\\sigma t$ sweep",
 			"sweeps": {
-				"topology.params.v_thresh": {"min": -30.0, "max": -10.0, "count": 64},
-				"topology.w": {"min": 0.1, "max": 0.4, "count": 64}
+				"topology.sigma_w": {"min": 0.0, "max": 0.01, "count": 50}
 			},
-			"repeat": 1
+			"repeat": 8
+		},
+		{
+			"name": "Time window $T$ sweep",
+			"sweeps": {
+				"input.time_window": {"min": 1.0, "max": 20.0, "count": 50}
+			},
+			"repeat": 8
 		}
 	]
 }
