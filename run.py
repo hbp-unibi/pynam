@@ -477,6 +477,8 @@ def finalize_analysis(result):
     for name in result:
         res = result[name]
         if result[name]["dims"] > 0:
+            if (len(res["data"].shape) == 1):
+                res["data"] = res["data"].reshape((1, res["data"].size))
             sort_keys = res["data"][:, 0:result[name]["dims"]].T
             res["data"] = res["data"][np.lexsort(sort_keys)]
         if res["idx"] == 1:
