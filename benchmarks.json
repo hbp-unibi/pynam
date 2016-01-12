@@ -1,0 +1,8 @@
+[
+  {
+    "model": "16x16 binary associative memory with varying sigma_t",
+    "tasks": [
+      "benchmark.py {system} benchmarks/net16_vary_sigma_t.json"
+    ]
+  }
+]
