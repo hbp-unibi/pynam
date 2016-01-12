@@ -78,5 +78,5 @@ for experiment in experiments:
     })
 
 with open('benchmark_results.json', 'w') as outfile:
-    json.dump(benchmark_results, outfile)
+    json.dump(benchmark_results, outfile, indent=4, sort_keys=True)
 
