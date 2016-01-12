@@ -530,69 +530,70 @@ def analyse_output_files(output_files, target, folder=""):
 # execute the corresponding functions defined above
 #
 
-# Parse the parameters and validate them
-params = parse_parameters()
-validate_parameters(params)
+if __name__ == "__main__":
+    # Parse the parameters and validate them
+    params = parse_parameters()
+    validate_parameters(params)
 
-mode = params["mode"]
+    mode = params["mode"]
 
-if mode == "create":
-    create_networks(params["experiment"], params["simulator"], "")
-elif mode == "exec" or mode == "analyse-exec":
-    if not execute_networks(params["files"], params["simulator"],
-            mode == "analyse-exec"):
-        sys.exit(1)
-elif mode == "analyse":
-    analyse_output_files(params["files"], params["target"])
-elif mode == "analyse-join":
-    analysis_join_output_files(params["files"], params["target"])
-elif mode == "process" or mode == "process-keep":
-    experiment = params["experiment"]
-    simulator = params["simulator"]
-    keep = mode == "process-keep"
-    analyse = not keep
+    if mode == "create":
+        create_networks(params["experiment"], params["simulator"], "")
+    elif mode == "exec" or mode == "analyse-exec":
+        if not execute_networks(params["files"], params["simulator"],
+                mode == "analyse-exec"):
+            sys.exit(1)
+    elif mode == "analyse":
+        analyse_output_files(params["files"], params["target"])
+    elif mode == "analyse-join":
+        analysis_join_output_files(params["files"], params["target"])
+    elif mode == "process" or mode == "process-keep":
+        experiment = params["experiment"]
+        simulator = params["simulator"]
+        keep = mode == "process-keep"
+        analyse = not keep
 
-    # Assemble a directory for the experiment files
-    date_prefix = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-    folder = os.path.join("out", date_prefix + "_" + simulator)
+        # Assemble a directory for the experiment files
+        date_prefix = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+        folder = os.path.join("out", date_prefix + "_" + simulator)
 
-    # Create the networks and fetch the input and output files
-    input_files, output_files = create_networks(experiment, simulator, folder,
-            analyse=analyse)
+        # Create the networks and fetch the input and output files
+        input_files, output_files = create_networks(experiment, simulator, folder,
+                analyse=analyse)
 
-    # Execute the networks, abort if the execution failed
-    if not execute_networks(input_files, simulator, analyse=analyse):
-        sys.exit(1)
+        # Execute the networks, abort if the execution failed
+        if not execute_networks(input_files, simulator, analyse=analyse):
+            sys.exit(1)
 
-    # Assemble the name of the target HDF5 file
-    experiment = os.path.basename(experiment)
-    if experiment.endswith(".json"):
-        experiment = experiment[:-5]
-    target = date_prefix + "_" + simulator + "_" + experiment + ".mat"
+        # Assemble the name of the target HDF5 file
+        experiment = os.path.basename(experiment)
+        if experiment.endswith(".json"):
+            experiment = experiment[:-5]
+        target = date_prefix + "_" + simulator + "_" + experiment + ".mat"
 
-    # Either just join the intermediate files or perform the actual analysis
-    if analyse:
-        analysis_join_output_files(output_files, target, "out")
-    else:
-        analyse_output_files(output_files, target, "out")
+        # Either just join the intermediate files or perform the actual analysis
+        if analyse:
+            analysis_join_output_files(output_files, target, "out")
+        else:
+            analyse_output_files(output_files, target, "out")
 
-    # Remove the partial input and output files (no longer needed)
-    if not keep:
-        for input_file in input_files:
+        # Remove the partial input and output files (no longer needed)
+        if not keep:
+            for input_file in input_files:
+                try:
+                    os.remove(input_file)
+                except:
+                    logger.warn("Error while deleting " + input_file)
+            for output_file in output_files:
+                try:
+                    os.remove(output_file)
+                except:
+                    logger.warn("Error while deleting " + output_file)
             try:
-                os.remove(input_file)
+                os.rmdir(folder)
             except:
-                logger.warn("Error while deleting " + input_file)
-        for output_file in output_files:
-            try:
-                os.remove(output_file)
-            except:
-                logger.warn("Error while deleting " + output_file)
-        try:
-            os.rmdir(folder)
-        except:
-            logger.warn("Error while deleting " + folder)
+                logger.warn("Error while deleting " + folder)
 
-logger.info("Done.")
-sys.exit(0)
+    logger.info("Done.")
+    sys.exit(0)
 
