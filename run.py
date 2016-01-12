@@ -242,7 +242,7 @@ def create_networks(experiment_file, simulator, path="", analyse=False):
             simulator=simulator, seed=seed)
 
     # Create the target directories
-    if path != "":
+    if path != "" and not os.path.isdir(path):
         os.makedirs(path)
 
     # Store the descriptors in the given path
