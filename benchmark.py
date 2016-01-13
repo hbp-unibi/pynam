@@ -17,11 +17,12 @@
 #   You should have received a copy of the GNU General Public License
 #   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys
-import os
-import run as model
-import pynam.utils
+import datetime
 import json
+import os
+import pynam.utils
+import sys
+import run as model
 
 if len(sys.argv) != 3:
     print sys.argv[0] + " <SYSTEM> <EXPERIMENT>"
