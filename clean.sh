@@ -19,6 +19,7 @@ find -depth \(\
 		\(\
 			   -name "*.backup"\
 			-o -name "*~"\
+			-o -name ".~*"\
 			-o -name "*.pyc"\
 			-o -name "spiketrain.in"\
 			-o -name "spikeyconfig.out"\
