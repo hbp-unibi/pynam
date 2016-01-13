@@ -63,7 +63,7 @@ except:
 
 # Write the output JSON file containing the benchmark results
 benchmark_results = {
-    "time": "2015-06-05T11:13:59.535885",
+    "time": datetime.datetime.now().isoformat(),
     "results": []
 }
 experiments = analysed_results.keys()
