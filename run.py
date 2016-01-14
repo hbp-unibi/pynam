@@ -267,7 +267,11 @@ def execute_networks(input_files, simulator, analyse=False):
     if (len(input_files) > 1):
         # Always spawn as many child processes as CPUs. The PyNNLessIsolated
         # class will care for serialization in the case of hardware systems.
-        concurrency = multiprocessing.cpu_count()
+        if simulator == "nmpm1":
+            concurrency = 1 # The pyhmf hardware backend only allows a single
+                            # concurrent instance of the PyNN process
+        else:
+            concurrency = multiprocessing.cpu_count()
 
         # Assemble the processes that should be executed
         mode = "--analyse-exec" if analyse else "--exec"
