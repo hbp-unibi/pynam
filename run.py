@@ -318,9 +318,8 @@ def execute_networks(input_files, simulator, analyse=False):
     input_network = read_object(input_file)
 
     # Redirect IO if the simulator is NMPM1
-    normalized_simulator = pynl.PyNNLess.normalized_simulator_name(simulator)
     setup = {
-        "redirect_io": True,#normalized_simulator == "nmpm1"
+        "redirect_io": True,
         "summarise_io": True
     }
 
@@ -553,7 +552,7 @@ if __name__ == "__main__":
         analysis_join_output_files(params["files"], params["target"])
     elif mode == "process" or mode == "process-keep":
         experiment = params["experiment"]
-        simulator = pynl.PyNNLess._lookup_simulator(params["simulator"])[0]
+        simulator = pynl.PyNNLess.normalized_simulator_name(params["simulator"])
         keep = mode == "process-keep"
         analyse = not keep
 
