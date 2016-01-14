@@ -553,7 +553,7 @@ if __name__ == "__main__":
         analysis_join_output_files(params["files"], params["target"])
     elif mode == "process" or mode == "process-keep":
         experiment = params["experiment"]
-        simulator = params["simulator"]
+        simulator = pynl.PyNNLess._lookup_simulator(params["simulator"])[0]
         keep = mode == "process-keep"
         analyse = not keep
 
