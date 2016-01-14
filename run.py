@@ -267,7 +267,7 @@ def execute_networks(input_files, simulator, analyse=False):
     if (len(input_files) > 1):
         # Always spawn as many child processes as CPUs. The PyNNLessIsolated
         # class will care for serialization in the case of hardware systems.
-        if simulator == "nmpm1":
+        if pynl.PyNNLess.normalized_simulator_name(simulator) == "nmpm1":
             concurrency = 1 # The pyhmf hardware backend only allows a single
                             # concurrent instance of the PyNN process
         else:
@@ -318,8 +318,9 @@ def execute_networks(input_files, simulator, analyse=False):
     input_network = read_object(input_file)
 
     # Redirect IO if the simulator is NMPM1
+    normalized_simulator = pynl.PyNNLess.normalized_simulator_name(simulator)
     setup = {
-        "redirect_io": True,
+        "redirect_io": True,#normalized_simulator == "nmpm1"
         "summarise_io": True
     }
 
@@ -552,7 +553,7 @@ if __name__ == "__main__":
         analysis_join_output_files(params["files"], params["target"])
     elif mode == "process" or mode == "process-keep":
         experiment = params["experiment"]
-        simulator = pynl.PyNNLess.normalized_simulator_name(params["simulator"])
+        simulator = params["simulator"]
         keep = mode == "process-keep"
         analyse = not keep
 
