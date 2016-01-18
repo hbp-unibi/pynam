@@ -292,19 +292,23 @@ class NetworkBuilder:
         t = TopologyParameters(topology_params)
         s = t["multiplicity"]
         net = pynl.Network()
-        for i in xrange(m):
-            for j in xrange(s):
-                net.add_source()
-        for i in xrange(n):
-            for j in xrange(s):
-                net.add_neuron(params=t.draw(), _type=t["neuron_type"],
-                        record=pynl.SIG_SPIKES)
+
+        population_input_size = m * s
+        population_input_params = [{} for _ in xrange(population_input_size)]
+        net.add_population(count=population_input_size, _type=pynl.TYPE_SOURCE,
+                params=population_input_params)
+
+        population_output_size = n * s
+        population_output_params = list(t.draw()
+            for _ in xrange(population_output_size))
+        net.add_population(count=population_output_size, _type=t["neuron_type"],
+                params=population_output_params, record=pynl.SIG_SPIKES)
 
         def in_coord(i, k=1):
-            return (i * s + k, 0)
+            return (0, i * s + k)
 
         def out_coord(j, k=1):
-            return (m * s + j * s + k, 0)
+            return (1, j * s + k)
 
         # Add all connections
         for i in xrange(m):
@@ -399,7 +403,7 @@ class NetworkBuilder:
         Injects the given spike times into the network.
         """
         for i in xrange(len(times)):
-            topology["populations"][i]["params"][0]["spike_times"] = times[i]
+            topology["populations"][0]["params"][i]["spike_times"] = times[i]
         return topology
 
     def build(self, time_offs=0, topology_params={}, input_params={},
@@ -515,10 +519,11 @@ class NetworkInstance(dict):
 
         # Build the output times
         input_count = len(input_times)
-        output_count = len(output) - input_count
+        output_count = len(output[1]["spikes"])
         output_times = [[] for _ in xrange(output_count)]
+
         for i in xrange(output_count):
-            output_times[i] = output[i + input_count]["spikes"][0]
+            output_times[i] = output[1]["spikes"][i]
 
         # Build the output indices
         output_indices = [[] for _ in xrange(output_count)]
