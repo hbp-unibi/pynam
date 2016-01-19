@@ -49,11 +49,21 @@ class DataParameters(dict):
         :param n_samples: number of samples. If negative, the number of samples
         with the maximum information are chosen.
         """
-        utils.init_key(self, data, "n_bits_in", n_bits_in)
-        utils.init_key(self, data, "n_bits_out", n_bits_out)
-        utils.init_key(self, data, "n_ones_in", n_ones_in)
-        utils.init_key(self, data, "n_ones_out", n_ones_out)
-        utils.init_key(self, data, "n_samples", n_samples)
+
+        # If "n_bits" is specified, set both n_bits_in and n_bits_out
+        if "n_bits" in data:
+            self["n_bits_in"] = int(data["n_bits"])
+            self["n_bits_out"] = int(data["n_bits"])
+            self["n_bits"] = int(data["n_bits"])
+        else:
+            utils.init_key(self, data, "n_bits_in", n_bits_in, _type=int)
+            utils.init_key(self, data, "n_bits_out", n_bits_out, _type=int)
+            utils.init_key(self, data, "n_bits",
+                self["n_bits_in"] if self["n_bits_in"] == self["n_bits_out"]
+                    else -1, _type=int)
+        utils.init_key(self, data, "n_ones_in", n_ones_in, _type=int)
+        utils.init_key(self, data, "n_ones_out", n_ones_out, _type=int)
+        utils.init_key(self, data, "n_samples", n_samples, _type=int)
 
         # Automatically choose the optimal number of samples
         if self["n_samples"] < 0:
@@ -85,7 +95,7 @@ class InputParameters(dict):
         :param p1: probability with which spikes from a "one" are randomly
         introduced for a sample containing zeros.
         """
-        utils.init_key(self, data, "burst_size", burst_size)
+        utils.init_key(self, data, "burst_size", burst_size, _type=int)
         utils.init_key(self, data, "time_window", time_window)
         utils.init_key(self, data, "isi", isi)
         utils.init_key(self, data, "sigma_t", sigma_t)
@@ -137,7 +147,7 @@ class OutputParameters(dict):
         :param data: dictionary the arguments are preferably copied from.
         :param burst_size: number of expected output spikes in a neuron.
         """
-        utils.init_key(self, data, "burst_size", burst_size)
+        utils.init_key(self, data, "burst_size", burst_size, _type=int)
 
 class TopologyParameters(dict):
     """
@@ -253,12 +263,12 @@ class NetworkBuilder:
                 n_bits = self.data_params["n_bits_in"],
                 n_ones = self.data_params["n_ones_in"],
                 n_samples = self.data_params["n_samples"],
-                seed=None if seed is None else ((seed + 5) * 1))
+                seed=None if seed is None else (seed + 5))
             self.mat_out = data.generate(
                 n_bits = self.data_params["n_bits_out"],
                 n_ones = self.data_params["n_ones_out"],
                 n_samples = self.data_params["n_samples"],
-                seed=None if seed is None else ((seed + 5) * 1))
+                seed=None if seed is None else (seed + 6) * 2)
 
         else:
             # If a matrices are given, derive the data parameters from those
