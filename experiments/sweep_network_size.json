@@ -1,0 +1,59 @@
+/**
+ * 2D parameter sweep
+ */
+{
+	"data": {
+		"n_bits": 16,
+		"n_ones_in": 8,
+		"n_ones_out": 8,
+		"n_samples": 50
+	},
+
+	"topology": {
+		"params": {
+			"e_rev_E": 0.0,
+			"e_rev_I": -70.0,
+			"v_rest": -70.0,
+			"v_reset": -80.0,
+			"v_thresh": -54.0,
+			"tau_syn_E": 5.0,
+			"tau_syn_I": 5.0,
+			"tau_refrac": 0.0,
+			"g_leak": 0.05,
+			"cm": 1.0
+		},
+		"neuron_type": "IF_cond_exp",
+		"w": 0.03
+	},
+
+	"input": {
+		"burst_size": 1,
+		"time_window": 200.0,
+		"isi": 10.0,
+		"sigma_t": 2.0,
+		"sigma_t_offs": 0.0,
+		"p0": 0.0,
+		"p1": 0.0
+	},
+
+	/**
+	 * Output data specification
+	 */
+	"output": {
+		"burst_size": 1
+	},
+
+	/**
+	 * Experiments to be conducted
+	 */
+	"experiments": [
+		{
+			"name": "Sweep $n, m$",
+			"sweeps": {
+				"data.n_bits": {"min": 16, "max": 128, "count": 5}
+			},
+			"repeat": 5
+		}
+	]
+}
+
