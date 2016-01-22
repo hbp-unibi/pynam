@@ -436,14 +436,14 @@ def analyse_output(output, result=None):
         norm_fp = dp["n_samples"] * (dp["n_bits_out"] - dp["n_ones_out"])
         norm_fn = dp["n_samples"] * dp["n_ones_out"]
         values[offs + 0] = I
-        values[offs + 1] = I / float(I_ref)
+        values[offs + 1] = 0.0 if I_ref == 0.0 else I / float(I_ref)
         values[offs + 2] = I_ref
         values[offs + 3] = fp
-        values[offs + 4] = fp / float(norm_fp)
+        values[offs + 4] = 0.0 if norm_fp == 0.0 else fp / float(norm_fp)
         values[offs + 5] = fp_ref
-        values[offs + 6] = fp_ref / float(norm_fp)
+        values[offs + 6] = 0.0 if norm_fp == 0.0 else fp_ref / float(norm_fp)
         values[offs + 7] = fn
-        values[offs + 8] = fn / float(norm_fn)
+        values[offs + 8] = 0.0 if norm_fn == 0.0 else fn / float(norm_fn)
         values[offs + 9] = latency_mean
         values[offs + 10] = latency_std
         values[offs + 11] = latencies_invalid_count

@@ -1,0 +1,68 @@
+/**
+ * 2D parameter sweep
+ */
+{
+	"data": {
+		"n_bits_in": 16,
+		"n_bits_out": 16,
+		"n_ones_in": 3,
+		"n_ones_out": 3
+	},
+
+	"topology": {
+		"params": {
+			"e_rev_E": 0.0,
+			"e_rev_I": -70.0,
+			"v_rest": -70.0,
+			"v_reset": -80.0,
+			"v_thresh": -54.0,
+			"tau_syn_E": 5.0,
+			"tau_syn_I": 5.0,
+			"tau_refrac": 0.0,
+			"g_leak": 0.05,
+			"cm": 1.0
+		},
+		"neuron_type": "IF_cond_exp",
+		"w": 0.03
+	},
+
+	"input": {
+		"burst_size": 1,
+		"time_window": 200.0,
+		"isi": 10.0,
+		"sigma_t": 5.0,
+		"sigma_t_offs": 0.0,
+		"p0": 0.0,
+		"p1": 0.0
+	},
+
+	/**
+	 * Output data specification
+	 */
+	"output": {
+		"burst_size": 1
+	},
+
+	/**
+	 * Experiments to be conducted
+	 */
+	"experiments": [
+		{
+			"name": "Sweep $g_\\mathrm{L}$, $\\tau_\\mathrm{e}$",
+			"sweeps": {
+				"topology.params.g_leak": {"min": 0.001, "max": 0.2, "count": 64},
+				"topology.params.tau_syn_E": {"min": 1.0, "max": 20.0, "count": 64}
+			},
+			"repeat": 1
+		},
+		{
+			"name": "Sweep $E_\\mathrm{Th}$, $w$",
+			"sweeps": {
+				"topology.params.v_thresh": {"min": -30.0, "max": -10.0, "count": 64},
+				"topology.w": {"min": 0.1, "max": 0.4, "count": 64}
+			},
+			"repeat": 1
+		}
+	]
+}
+
