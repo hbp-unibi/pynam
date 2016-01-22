@@ -1,0 +1,60 @@
+{
+	"data": {
+		"n_bits_in": 16,
+		"n_bits_out": 16,
+		"n_ones_in": 3,
+		"n_ones_out": 3
+	},
+
+	"topology": {
+		"params": {
+			"cm" : 0.2,
+			"e_rev_E" : 0,
+			"e_rev_I" : -70,
+			"i_offset" : 0,
+			"syn_weight" : 0.01,
+			"tau_m" : 15.9441,
+			"tau_refrac" : 0,
+			"tau_syn_E" : 14.4027,
+			"tau_syn_I" : 5,
+			"v_reset" : -110,
+			"v_rest" : -105,
+			"v_thresh" : -55
+		},
+		"neuron_type": "IF_cond_exp",
+		"w": 0.01,
+		"multiplicity": 1
+	},
+
+	"input": {
+		"burst_size": 1,
+		"time_window": 200.0,
+		"isi": 2.0,
+		"sigma_t": 5.0,
+		"sigma_t_offs": 0.0,
+		"p0": 0.0,
+		"p1": 0.0
+	},
+
+	/**
+	 * Output data specification
+	 */
+	"output": {
+		"burst_size": 1
+	},
+
+	/**
+	 * Experiments to be conducted
+	 */
+	"experiments": [
+		{
+			"name": "Sweep $E_\\mathrm{Th}$, $w$",
+			"sweeps": {
+				"topology.params.v_thresh": {"min": -104.0, "max": -55.0, "count": 32},
+				"topology.w": {"min": 0.0, "max": 0.02, "count": 32}
+			},
+			"repeat": 1
+		}
+	]
+}
+
