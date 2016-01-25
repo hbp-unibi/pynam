@@ -74,7 +74,7 @@ for experiment in experiments:
     idx = keys.index("I_n")
     benchmark_results["results"].append({
         "type": "information",  # should probably be one of "quality", "performance",
-        "name": global_experiment_name + "__" + experiment,
+        "name": experiment,
         "value": results["data"][0][idx],
         "measure": "unknown"  # to be implemented
     })
