@@ -318,6 +318,7 @@ class BiNAM(BinaryMatrix):
         for i in xrange(self.n_rows):
             if (vec_in[i] != 0):
                 self.arr[i] = np.bitwise_or(self.arr[i], vec_out)
+        return self
 
     def train_matrix(self, mat_in, mat_out):
         """
@@ -329,10 +330,13 @@ class BiNAM(BinaryMatrix):
         N, m = mat_in.shape
         N2, n = mat_out.shape
         assert(N == N2)
+        if (self.n_rows == 0 and self.n_cols == 0):
+            self.resize(m, n)
         assert(m == self.n_rows)
         assert(n == self.n_cols)
         for k in xrange(N):
             self.train(mat_in[k], mat_out[k])
+        return self
 
     def evaluate(self, vec_in, threshold = -1):
         """
