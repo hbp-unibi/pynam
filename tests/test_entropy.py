@@ -21,7 +21,8 @@ import unittest
 import numpy as np
 import numpy.testing
 from pynam.entropy import ncr, entropy_hetero, entropy_hetero_uniform,\
-        expected_false_positives, calculate_errs, optimal_sample_count\
+        expected_false_positives, calculate_errs, optimal_sample_count,\
+        optimal_sample_count_naive
 
 class TestUtils(unittest.TestCase):
 
@@ -110,4 +111,6 @@ class TestUtils(unittest.TestCase):
     def test_optimal_sample_count(self):
         self.assertEqual(52, optimal_sample_count(16, 16, 2, 2))
         self.assertEqual(62, optimal_sample_count(32, 32, 4, 4))
+        self.assertEqual(optimal_sample_count_naive(1000, 800, 5, 6),
+                optimal_sample_count(1000, 800, 5, 6))
 

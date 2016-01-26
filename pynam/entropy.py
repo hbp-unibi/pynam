@@ -147,14 +147,40 @@ def calculate_errs(mat_out, mat_out_expected):
                 res[k]["fn"] = res[k]["fn"] + 1 - min(1, mat_out[k, j])
     return res
 
+def find_minimum_unimodal(f, a, b, tol=1):
+    # Implementation of Golden section search
+    # https://en.wikipedia.org/wiki/Golden_section_search
+    gr = 0.5 * (math.sqrt(5)-1)
+    c = b - gr * (b-a)
+    d = a + gr * (b-a)
+    while abs(c - d) > tol:
+        fc = f(c)
+        fd = f(d)
+        if fc < fd:
+            b = d
+            d = c
+            c = b - gr * (b-a)
+        else:
+            a = c
+            c = d
+            d = a + gr * (b-a)
+    return (b + a) / 2
+
 def optimal_sample_count(n_bits_in, n_bits_out, n_ones_in, n_ones_out):
     """
     Finds the sample count with the -- theoretically -- maximum information
     for the given data parameters.
-
-    TODO: Use faster method to find maximum
     """
     I = 0.0
+    p = 1.0 - float(n_ones_in * n_ones_out) / float(n_bits_in * n_bits_out)
+    N_min = 0
+    N_max = int(math.ceil(math.log(0.1) / math.log(p)))
+    return int(find_minimum_unimodal(lambda N:
+        -expected_entropy(int(N), n_bits_out, n_ones_out,
+                n_bits_in, n_ones_in), N_min, N_max, tol=1))
+
+def optimal_sample_count_naive(n_bits_in, n_bits_out, n_ones_in, n_ones_out):
+    I = 0
     N = 0
     while True:
         N_next = N + 1
