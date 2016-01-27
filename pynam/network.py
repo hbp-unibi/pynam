@@ -51,7 +51,7 @@ class DataParameters(dict):
         """
 
         # If "n_bits" is specified, set both n_bits_in and n_bits_out
-        if "n_bits" in data:
+        if ("n_bits" in data) and (data["n_bits"] != -1):
             self["n_bits_in"] = int(data["n_bits"])
             self["n_bits_out"] = int(data["n_bits"])
             self["n_bits"] = int(data["n_bits"])

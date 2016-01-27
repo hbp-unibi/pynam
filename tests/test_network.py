@@ -504,14 +504,16 @@ class TestNetworkPool(unittest.TestCase):
             "n_bits_out": 10,
             "n_ones_in": 3,
             "n_ones_out": 3,
-            "n_samples": 40
+            "n_samples": 40,
+            "n_bits": -1
         }
         dp2 = {
             "n_bits_in": 8,
             "n_bits_out": 16,
             "n_ones_in": 2,
             "n_ones_out": 4,
-            "n_samples": 50
+            "n_samples": 50,
+            "n_bits": -1
         }
         net1 = NetworkBuilder(data_params=dp1)
         net2 = NetworkBuilder(data_params=dp2)
