@@ -518,7 +518,7 @@ class NetworkInstance(dict):
         return tF, kF, nF
 
     @staticmethod
-    def match_static(input_times, input_indices, output):
+    def match_static(input_times, input_indices, output_times):
         """
         Extracts the output spike times from the simulation output and
         calculates the sample index for each output spike.
@@ -528,12 +528,7 @@ class NetworkInstance(dict):
         tIn, kIn, _ = NetworkInstance.flaten(input_times, input_indices)
 
         # Build the output times
-        input_count = len(input_times)
-        output_count = len(output)
-        output_times = [[] for _ in xrange(output_count)]
-
-        for i in xrange(output_count):
-            output_times[i] = output[i]
+        output_count = len(output_times)
 
         # Build the output indices
         output_indices = [[] for _ in xrange(output_count)]
