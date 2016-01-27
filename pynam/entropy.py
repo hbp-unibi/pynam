@@ -34,8 +34,8 @@ def ncr(n, k):
         return 0L
     if (k > n / 2):
         return ncr(n, n - k)
-    res = 1L
-    for i in xrange(1L, long(k + 1)):
+    res = 1
+    for i in xrange(1, k + 1):
         res = (res * (n + 1 - i)) // i
     return res
 
