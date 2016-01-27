@@ -438,7 +438,7 @@ class TestNetworkInstance(unittest.TestCase):
             {}, {"spikes": [[95.0], [195.0], [295.0], [395.0]]}
         ]
         output_spikes, output_indices = NetworkInstance.match_static(
-                input_times, input_indices, output)
+                input_times, input_indices, output[1]["spikes"])
         self.assertEqual(output_spikes, [[95.0], [195.0], [295.0], [395.0]])
         self.assertEqual(output_indices, [[0], [0], [1], [2]])
 

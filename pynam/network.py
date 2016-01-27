@@ -529,11 +529,11 @@ class NetworkInstance(dict):
 
         # Build the output times
         input_count = len(input_times)
-        output_count = len(output[1]["spikes"])
+        output_count = len(output)
         output_times = [[] for _ in xrange(output_count)]
 
         for i in xrange(output_count):
-            output_times[i] = output[1]["spikes"][i]
+            output_times[i] = output[i]
 
         # Build the output indices
         output_indices = [[] for _ in xrange(output_count)]
@@ -556,7 +556,7 @@ class NetworkInstance(dict):
         """
 
         return self.match_static(self["input_times"], self["input_indices"],
-                output)
+                output[1]["spikes"])
 
     @staticmethod
     def split(times, indices, k0, k1):
