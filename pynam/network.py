@@ -575,7 +575,7 @@ class NetworkInstance(dict):
             input_split=[]):
         # Fetch the output times and output indices
         output_times, output_indices = NetworkInstance.match_static(input_times,
-                input_indices, output)
+                input_indices, output[1]["spikes"])
 
         # Only assume a single split if no input_split descriptor is given
         if (len(input_split) == 0):
