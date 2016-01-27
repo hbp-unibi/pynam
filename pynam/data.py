@@ -24,6 +24,7 @@ can be used to train a BiNAM.
 
 import entropy
 import utils
+import math
 import numpy as np
 
 #
@@ -61,10 +62,37 @@ class PermutationTrieNode:
         from which it should be fetched. If parent is None a new root node is
         generated.
         """
+
+        def ncr(n, r):
+            # Handle special cases
+            if (n < r) or (r < 0) or (n < 0):
+                return 0
+            if (n == r) or (r == 0):
+                return 1
+
+            # If the parent choices in the parent node is larger than the
+            # maximum sample count, we don't have to be that exact
+            vmax = 0x7FFFFFFF
+            lmax = 9.33
+            ptotal = vmax if parent is None else parent.total
+            if ptotal >= vmax:
+                # Check the lower bound nCr >= (n/r)^r
+                lmin_val = r * math.log(n / float(r))
+                if (lmin_val > lmax):
+                    return vmax
+
+            # Use the lnncrr function to compute ncr (faster for large r)
+            if r < 100:
+                return entropy.ncr(n, r)
+            res = entropy.lnncrr(n, r)
+            if res > lmax:
+                return vmax
+            return int(round(math.exp(entropy.lnncrr(n, r))))
+
         self.idx = idx;
-        max_val = np.iinfo(np.uint64).max
-        self.max_permutations = np.fromiter((min(entropy.ncr(i, remaining - 1),
-                max_val) for i in xrange(idx)), dtype=np.uint64, count=idx)
+        self.max_permutations = np.fromiter((ncr(i, remaining - 1)
+                for i in xrange(idx)), dtype=np.uint32, count=idx)
+        self.total = min(0x7FFFFFFF, np.sum(self.max_permutations))
         self.permutations = self.max_permutations.copy()
         self.children = {}
         self.parent = parent
@@ -111,8 +139,8 @@ def _finalize_generate(old_random_state):
 # Cache containing generated data for certain parameters
 _generate_cache_ = {}
 
-def generate(n_bits, n_ones, n_samples, abort_on_restart=False, seed=None,
-        weight_choices=True, random=True, balance=True):
+def generate(n_bits, n_ones, n_samples, seed=None, weight_choices=True,
+        random=True, balance=True, abort_on_restart=False):
     """
     Generates a set of training vectors to be used in conjunction with the
     BiNAM. The returned data has the following properties:
