@@ -832,8 +832,11 @@ class NetworkAnalysis(dict):
         s = self["topology_params"]["multiplicity"]
 
         # Create the output matrix
-        N = self["data_params"]["n_samples"]
-        n = self["data_params"]["n_bits_out"]
+        if hasattr(self["mat_out"], "shape"):
+            N, n = self["mat_out"].shape
+        else:
+            N = self["data_params"]["n_samples"]
+            n = self["data_params"]["n_bits_out"]
         res = np.zeros((N, n))
 
         # Iterate over each sample
