@@ -71,6 +71,8 @@ class Experiment(dict):
     def read_from_file(filename):
         with open(filename) as stream:
             data = utils.parse_json_with_comments(stream)
+        res = Experiment(data)
+        print("Network data parameters: " + str(res["data"]))
         return Experiment(data)
 
     @classmethod
