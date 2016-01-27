@@ -51,7 +51,7 @@ class DataParameters(dict):
         """
 
         # If "n_bits" is specified, set both n_bits_in and n_bits_out
-        if ("n_bits" in data) and (data["n_bits"] != -1):
+        if ("n_bits" in data) and (data["n_bits"] > 0):
             self["n_bits_in"] = int(data["n_bits"])
             self["n_bits_out"] = int(data["n_bits"])
             self["n_bits"] = int(data["n_bits"])
@@ -71,8 +71,17 @@ class DataParameters(dict):
                 + self["algorithm"]
                 + "\", must be one of {\"random\", \"balanced\", \"unique\"}!")
 
+        # If n_ones_in and n_ones_out is not given, automatically calculate
+        # n_ones_in, n_ones_out and n_samples
+        if (self["n_ones_in"] <= 0) and (self["n_ones_out"] <= 0):
+            params = entropy.optimal_parameters(n_samples=self["n_samples"],
+                    n_bits_in=self["n_bits_in"], n_bits_out=self["n_bits_out"])
+            self["n_samples"] = params["n_samples"]
+            self["n_ones_in"] = params["n_ones_in"]
+            self["n_ones_out"] = params["n_ones_out"]
+
         # Automatically choose the optimal number of samples
-        if self["n_samples"] < 0:
+        if self["n_samples"] <= 0:
             self["n_samples"] = entropy.optimal_sample_count(
                     n_bits_out = self["n_bits_out"],
                     n_bits_in = self["n_bits_in"],

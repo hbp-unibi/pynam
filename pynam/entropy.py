@@ -191,6 +191,41 @@ def optimal_sample_count_naive(n_bits_in, n_bits_out, n_ones_in, n_ones_out):
         I = I_next
         N = N_next
 
+def optimal_parameters(n_bits=100, n_samples=-1, n_bits_in=-1, n_bits_out=-1):
+    n_min = 1
+    n_max = (n_bits // 2) + 1
+    n_bits_in = n_bits if n_bits_in <= 0 else n_bits_in
+    n_bits_out = n_bits if n_bits_out <= 0 else n_bits_out
+
+    arg = {
+        "I_max": 0,
+        "N_max": 0
+    }
+
+    def goal_fun(n_ones, arg):
+        n_ones = int(n_ones)
+        if (n_samples <= 0):
+            N = optimal_sample_count(n_bits, n_bits, n_ones, n_ones)
+        else:
+            N = n_samples
+        I = expected_entropy(N, n_bits, n_ones, n_bits, n_ones)
+        if I == 0: # Quirk to make sure the function is truely unimodal
+            I = -n_ones
+        if I > arg["I_max"]:
+            arg["I_max"] = I
+            arg["N_max"] = N
+        return -I
+
+    n_ones = int(find_minimum_unimodal(lambda n: goal_fun(n, arg), n_min, n_max))
+
+    return {
+        "n_bits_in": n_bits,
+        "n_ones_in": n_ones,
+        "n_bits_out": n_bits,
+        "n_ones_out": n_ones,
+        "n_samples": arg["N_max"]
+    }
+
 def conventional_memory_entropy(n_bits_in, n_bits_out, n_ones_out):
     """
     Calculates storage capacity of a conventional MxN ROM holding data with the
