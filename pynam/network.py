@@ -38,7 +38,7 @@ class DataParameters(dict):
     """
 
     def __init__(self, data={}, n_bits_in=16, n_bits_out=16, n_ones_in=3,
-            n_ones_out=3, n_samples = -1):
+            n_ones_out=3, n_samples = -1, algorithm="balanced"):
         """
         Fills the network structure with the given parameters.
 
@@ -64,6 +64,12 @@ class DataParameters(dict):
         utils.init_key(self, data, "n_ones_in", n_ones_in, _type=int)
         utils.init_key(self, data, "n_ones_out", n_ones_out, _type=int)
         utils.init_key(self, data, "n_samples", n_samples, _type=int)
+        utils.init_key(self, data, "algorithm", algorithm, _type=str)
+
+        if not self["algorithm"] in ["random", "balanced", "unique"]:
+            raise Exception("Invalid data generation algorithm \""
+                + self["algorithm"]
+                + "\", must be one of {\"random\", \"balanced\", \"unique\"}!")
 
         # Automatically choose the optimal number of samples
         if self["n_samples"] < 0:
@@ -258,17 +264,27 @@ class NetworkBuilder:
             # Use the supplied data parameters -- generate the data matrices
             self.data_params = DataParameters(data_params)
 
-            # Generate the data with a fixed seed
-            self.mat_in = data.generate(
+            # Select the data generation function
+            if self.data_params["algorithm"] == "balanced":
+                gen_fun = data.generate
+            elif self.data_params["algorithm"] == "random":
+                gen_fun = data.generate_random
+            elif self.data_params["algorithm"] == "unique":
+                gen_fun = (lambda n_bits, n_ones, n_samples, seed:
+                        data.generate(n_bits, n_ones, n_samples, seed,
+                        balance=False))
+
+            # Generate the data with the given seed
+            self.mat_in = gen_fun(
                 n_bits = self.data_params["n_bits_in"],
                 n_ones = self.data_params["n_ones_in"],
                 n_samples = self.data_params["n_samples"],
-                seed=None if seed is None else (seed + 5))
-            self.mat_out = data.generate(
+                seed = (None if seed is None else (seed + 5)))
+            self.mat_out = gen_fun(
                 n_bits = self.data_params["n_bits_out"],
                 n_ones = self.data_params["n_ones_out"],
                 n_samples = self.data_params["n_samples"],
-                seed=None if seed is None else (seed + 6) * 2)
+                seed = (None if seed is None else (seed + 6) * 2))
 
         else:
             # If a matrices are given, derive the data parameters from those

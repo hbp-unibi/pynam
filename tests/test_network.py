@@ -505,7 +505,8 @@ class TestNetworkPool(unittest.TestCase):
             "n_ones_in": 3,
             "n_ones_out": 3,
             "n_samples": 40,
-            "n_bits": -1
+            "n_bits": -1,
+            "algorithm": "unique"
         }
         dp2 = {
             "n_bits_in": 8,
@@ -513,7 +514,8 @@ class TestNetworkPool(unittest.TestCase):
             "n_ones_in": 2,
             "n_ones_out": 4,
             "n_samples": 50,
-            "n_bits": -1
+            "n_bits": -1,
+            "algorithm": "random"
         }
         net1 = NetworkBuilder(data_params=dp1)
         net2 = NetworkBuilder(data_params=dp2)
