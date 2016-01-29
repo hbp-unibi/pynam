@@ -73,9 +73,10 @@ for experiment in experiments:
     keys = map(lambda s: s.strip(), results["keys"].tolist())
     idx = keys.index("I_n")
     benchmark_results["results"].append({
-        "type": "information",
-        "name": "https://github.com/hbp-sanncs/pynam.git/" + global_experiment_name + "#" + experiment,
-        "value": results["data"][0][idx]
+        "type": "information",  # should probably be one of "quality", "performance",
+        "name": experiment,
+        "value": results["data"][0][idx],
+        "measure": "unknown"  # to be implemented
     })
 
 with open('benchmark_results.json', 'w') as outfile:

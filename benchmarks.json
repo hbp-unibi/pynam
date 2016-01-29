@@ -15,7 +15,7 @@
       },
       {
         "name": "population_burst_vary_sigma_t",
-        "command": "benchmark.py {system} benchmarks/net16_population_burst_vary_sigma_t.json"
+        "command": "benchmark.py {system} benchmarks/net16_burst_population_vary_sigma_t.json"
       }
     ]
   }

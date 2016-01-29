@@ -276,7 +276,7 @@ def execute_networks(input_files, simulator, analyse=False):
         # Assemble the processes that should be executed
         mode = "--analyse-exec" if analyse else "--exec"
         script = os.path.realpath(__file__)
-        cmds = [["python", script, simulator, mode, x] for x in input_files]
+        cmds = [[sys.executable, script, simulator, mode, x] for x in input_files]
         processes = []
         had_error = False
         while (((len(cmds) > 0) or (len(processes) > 0))
