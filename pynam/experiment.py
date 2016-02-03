@@ -35,7 +35,7 @@ class ExperimentException(Exception):
 
 class Experiment(dict):
     """
-    Class representing an entrie collection of experiments and all network
+    Class representing an entire collection of experiments and all network
     parameters. The Experiment class is responsible for generating a set of
     NetworkPool instances according to the experiment descriptors. These
     NetworkPool instances can then be executed independently.
@@ -272,7 +272,7 @@ class Experiment(dict):
 
                     # Advance the build_seed -- the input and topology
                     # parameters should still vary between trials,
-                    # but reproducably
+                    # but reproducibly
                     local_build_seed = local_build_seed * 2
 
         # Return non-empty pool instances

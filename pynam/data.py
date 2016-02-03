@@ -87,7 +87,7 @@ class PermutationTrieNode:
             res = entropy.lnncrr(n, r)
             if res > lmax:
                 return vmax
-            return int(round(math.exp(entropy.lnncrr(n, r))))
+            return int(round(math.exp(res)))
 
         self.idx = idx;
         self.max_permutations = np.fromiter((ncr(i, remaining - 1)
@@ -163,7 +163,7 @@ def generate(n_bits, n_ones, n_samples, seed=None, weight_choices=True,
     A samller data matrix than requested will be returned in this case.
     :param seed: If not "None", the random generator will be adjusted to use the
     given seed. The generator will be reset after this function ends.
-    :param weight_choices: If True (default), the a correct weight is applied
+    :param weight_choices: If True (default), the correct weight is applied
     to the random choices, which is crucial to ensure the generated samples
     will be uncorrelated. Only has an effect if "random" is set to True.
     :param random: If False, a deterministic set of samples is generated.

@@ -26,7 +26,7 @@
 
 
 SIMULATOR=${1:-spikey}
-SDK_PATH=${SDK_PATH:-~/source/spikey_demo}
+SDK_PATH=${SDK_PATH:-~/spikey}
 TMPFILE=`mktemp`
 
 (
@@ -41,7 +41,7 @@ TMPFILE=`mktemp`
 	fi
 
 	# Execute the PyNAM main script
-	./run.py "$SIMULATOR" 2>&1 | tee "$TMPFILE"
+	./run.py "$SIMULATOR" experiments/demo_2d_sweep_spikey.json 2>&1 | tee "$TMPFILE"
 )
 
 # Plot the created output
@@ -55,7 +55,7 @@ rm "$TMPFILE"
 if [ -e "$TARGET" ]; then
 	cd ./misc
 	./information_plot.py "$TARGET"
-	evince out/plot_*.pdf
+	evince out/plot_*_2d_spikey.pdf
 fi
 
 

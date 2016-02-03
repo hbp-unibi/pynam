@@ -38,7 +38,7 @@ class DataParameters(dict):
     """
 
     def __init__(self, data={}, n_bits_in=16, n_bits_out=16, n_ones_in=3,
-            n_ones_out=3, n_samples=-1, algorithm="balanced"):
+                 n_ones_out=3, n_samples=-1, algorithm="balanced"):
         """
         Fills the network structure with the given parameters.
 
@@ -69,14 +69,15 @@ class DataParameters(dict):
 
         if not self["algorithm"] in ["random", "balanced", "unique"]:
             raise Exception("Invalid data generation algorithm \""
-                + self["algorithm"]
-                + "\", must be one of {\"random\", \"balanced\", \"unique\"}!")
+                            + self["algorithm"]
+                            + "\", must be one of {\"random\", \"balanced\", \"unique\"}!")
 
         # If n_ones_in and n_ones_out is not given, automatically calculate
         # n_ones_in, n_ones_out and n_samples
         if (self["n_ones_in"] <= 0) and (self["n_ones_out"] <= 0):
             params = entropy.optimal_parameters(n_samples=self["n_samples"],
-                    n_bits_in=self["n_bits_in"], n_bits_out=self["n_bits_out"])
+                                                n_bits_in=self["n_bits_in"],
+                                                n_bits_out=self["n_bits_out"])
             self["n_samples"] = params["n_samples"]
             self["n_ones_in"] = params["n_ones_in"]
             self["n_ones_out"] = params["n_ones_out"]
@@ -225,6 +226,10 @@ class TopologyParameters(dict):
             self["params"])
 
     def draw(self):
+        """
+        :return: Gives out the actual values for a random outcome off all
+        parameters which appear in "param_noise" with given standard deviation
+        """
         res = dict(self["params"])
         for key in res.keys():
             if key in self["param_noise"] and self["param_noise"][key] > 0:
@@ -233,6 +238,10 @@ class TopologyParameters(dict):
         return pynl.PyNNLess.clamp_parameters(res)
 
     def draw_weight(self):
+        """
+        :return: If the weights have no jitter,return w, else return random
+        value with standard deviation sigma_w
+        """
         if self["sigma_w"] <= 0.0:
             return self["w"]
         return max(0.0, np.random.normal(self["w"], self["sigma_w"]))
@@ -283,20 +292,20 @@ class NetworkBuilder:
                 gen_fun = data.generate_random
             elif self.data_params["algorithm"] == "unique":
                 gen_fun = (lambda n_bits, n_ones, n_samples, seed:
-                        data.generate(n_bits, n_ones, n_samples, seed,
-                        balance=False))
+                           data.generate(n_bits, n_ones, n_samples, seed,
+                                         balance=False))
 
             # Generate the data with the given seed
             self.mat_in = gen_fun(
-                n_bits = self.data_params["n_bits_in"],
-                n_ones = self.data_params["n_ones_in"],
-                n_samples = self.data_params["n_samples"],
-                seed = (None if seed is None else (seed + 5)))
+                n_bits=self.data_params["n_bits_in"],
+                n_ones=self.data_params["n_ones_in"],
+                n_samples=self.data_params["n_samples"],
+                seed=(None if seed is None else (seed + 5)))
             self.mat_out = gen_fun(
-                n_bits = self.data_params["n_bits_out"],
-                n_ones = self.data_params["n_ones_out"],
-                n_samples = self.data_params["n_samples"],
-                seed = (None if seed is None else (seed + 6) * 2))
+                n_bits=self.data_params["n_bits_out"],
+                n_ones=self.data_params["n_ones_out"],
+                n_samples=self.data_params["n_samples"],
+                seed=(None if seed is None else (seed + 6) * 2))
 
         else:
             # If a matrices are given, derive the data parameters from those
@@ -370,7 +379,7 @@ class NetworkBuilder:
 
         def rmin(xs):
             """
-            Roboust min function, returns Inf if xs is empty.
+            Robust min function, returns Inf if xs is empty.
             """
             return np.inf if len(xs) == 0 else min(xs)
 
@@ -516,7 +525,7 @@ class NetworkInstance(dict):
         self["topology_params"] = TopologyParameters(self["topology_params"])
 
     @staticmethod
-    def flaten(times, indices, sort_by_sample=False):
+    def flatten(times, indices, sort_by_sample=False):
         """
         Flatens a list of spike times and corresponding indices to three
         one-dimensional arrays containing the spike time, sample indices and
@@ -559,7 +568,7 @@ class NetworkInstance(dict):
         """
 
         # Flaten and sort the input times and input indices for efficient search
-        tIn, kIn, _ = NetworkInstance.flaten(input_times, input_indices)
+        tIn, kIn, _ = NetworkInstance.flatten(input_times, input_indices)
 
         # Build the output times
         output_count = len(output_times)
@@ -589,6 +598,10 @@ class NetworkInstance(dict):
 
     @staticmethod
     def split(times, indices, k0, k1):
+        """
+        Gives back all times and their indices whose index lies between
+        k0 and k1
+        """
         times_part = [[] for _ in xrange(len(times))]
         indices_part = [[] for _ in xrange(len(indices))]
         for i in xrange(len(times)):
@@ -603,6 +616,9 @@ class NetworkInstance(dict):
                               data_params, topology_params, meta_data, mat_in,
                               mat_out,
                               input_split=[]):
+        """
+        Analysis of the given data: returns a NetworkAnalysis dictionary
+        """
         # Fetch the output times and output indices
         output_times, output_indices = NetworkInstance.match_static(input_times,
                                                                     input_indices,
@@ -842,12 +858,12 @@ class NetworkAnalysis(dict):
         """
 
         # Flaten the input and output times and indices
-        tIn, kIn, _ = NetworkInstance.flaten(self["input_times"],
-                                             self["input_indices"],
-                                             sort_by_sample=True)
-        tOut, kOut, _ = NetworkInstance.flaten(self["output_times"],
-                                               self["output_indices"],
-                                               sort_by_sample=True)
+        tIn, kIn, _ = NetworkInstance.flatten(self["input_times"],
+                                              self["input_indices"],
+                                              sort_by_sample=True)
+        tOut, kOut, _ = NetworkInstance.flatten(self["output_times"],
+                                                self["output_indices"],
+                                                sort_by_sample=True)
 
         # Fetch the number of samples
         N = self["data_params"]["n_samples"]
@@ -873,9 +889,9 @@ class NetworkAnalysis(dict):
         """
 
         # Flaten the output spike sample indices and neuron indices
-        _, kOut, nOut = NetworkInstance.flaten(self["output_times"],
-                                               self["output_indices"],
-                                               sort_by_sample=True)
+        _, kOut, nOut = NetworkInstance.flatten(self["output_times"],
+                                                self["output_indices"],
+                                                sort_by_sample=True)
 
         # Fetch the neuron multiplicity
         s = self["topology_params"]["multiplicity"]
@@ -906,7 +922,8 @@ class NetworkAnalysis(dict):
         """
         Calculates the maximum theoretical storage capacity for this network.
         """
-        if hasattr(self["mat_out"], "shape") and hasattr(self["mat_in"], "shape"):
+        if hasattr(self["mat_out"], "shape") and hasattr(self["mat_in"],
+                                                         "shape"):
             _, m = self["mat_in"].shape
             _, n = self["mat_out"].shape
             mem = binam.BiNAM(m, n)
