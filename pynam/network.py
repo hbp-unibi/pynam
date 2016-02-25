@@ -527,7 +527,7 @@ class NetworkInstance(dict):
     @staticmethod
     def flatten(times, indices, sort_by_sample=False):
         """
-        Flatens a list of spike times and corresponding indices to three
+        Flattens a list of spike times and corresponding indices to three
         one-dimensional arrays containing the spike time, sample indices and
         neuron indices.
         """
@@ -567,7 +567,7 @@ class NetworkInstance(dict):
         calculates the sample index for each output spike.
         """
 
-        # Flaten and sort the input times and input indices for efficient search
+        # Flatten and sort the input times and input indices for efficient search
         tIn, kIn, _ = NetworkInstance.flatten(input_times, input_indices)
 
         # Build the output times
@@ -857,7 +857,7 @@ class NetworkAnalysis(dict):
         sample. The latency for samples without a response is set to infinity.
         """
 
-        # Flaten the input and output times and indices
+        # Flatten the input and output times and indices
         tIn, kIn, _ = NetworkInstance.flatten(self["input_times"],
                                               self["input_indices"],
                                               sort_by_sample=True)
@@ -888,7 +888,7 @@ class NetworkAnalysis(dict):
         Calculates a matrix containing the actually calculated output samples.
         """
 
-        # Flaten the output spike sample indices and neuron indices
+        # Flatten the output spike sample indices and neuron indices
         _, kOut, nOut = NetworkInstance.flatten(self["output_times"],
                                                 self["output_indices"],
                                                 sort_by_sample=True)
