@@ -496,6 +496,12 @@ def finalize_analysis(result):
             print "\t".join(map(lambda x: x.strip(), res["keys"]))
             print "\t".join(map(lambda x: "%.2f" % x, data))
             print
+            print "Timings for experiment \"" + name + "\""
+            for k, v in res["time"].items():
+                print (k
+                    + " " * (max(map(len, res["time"].keys())) - len(k)) + "\t"
+                    + str(v))
+            print
         del res["idx"]
     return result
 
