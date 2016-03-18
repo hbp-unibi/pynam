@@ -1,0 +1,40 @@
+{
+	"data": {
+		"n_bits_in": 32,
+		"n_bits_out": 32,
+		"n_ones_in": 4,
+		"n_ones_out": 4/*,
+		"n_samples" : 1000*/
+	},
+
+	"topology": {
+		"params": {
+			"e_rev_E": 0.0,
+			"v_rest": -70.0,
+			"v_reset": -80.0,
+			"v_thresh": -62.0,
+			"tau_syn_E": 2.0,
+			"tau_refrac": 0.0,
+			"g_leak": 0.089,
+			"cm": 0.2
+		},
+		"neuron_type": "IF_cond_exp",
+		"w": 0.001,
+		"multiplicity": 4
+	},
+
+	"input": {
+		"burst_size": 4,
+		"time_window": 100.0,
+		"isi": 2.0,
+		"sigma_t": 2.0,
+		"sigma_t_offs": 0.0,
+		"p0": 0.0,
+		"p1": 0.0
+	},
+
+	"output": {
+		"burst_size": 1
+	}
+}
+
