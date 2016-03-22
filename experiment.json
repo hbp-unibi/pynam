@@ -1,9 +1,10 @@
 {
 	"data": {
-		"n_bits_in": 16,
-		"n_bits_out": 16,
-		"n_ones_in": 3,
-		"n_ones_out": 3
+		"n_bits_in": 32,
+		"n_bits_out": 32,
+		"n_ones_in": 4,
+		"n_ones_out": 4/*,
+		"n_samples" : 1000*/
 	},
 
 	"topology": {
@@ -11,14 +12,15 @@
 			"e_rev_E": 0.0,
 			"v_rest": -70.0,
 			"v_reset": -80.0,
-			"v_thresh": -55.0,
+			"v_thresh": -64.7,
 			"tau_syn_E": 2.0,
 			"tau_refrac": 0.0,
 			"g_leak": 0.02,
 			"cm": 0.2
 		},
 		"neuron_type": "IF_cond_exp",
-		"w": 0.016
+		"w": 0.001,
+		"multiplicity": 4
 	},
 
 	"input": {
@@ -31,38 +33,8 @@
 		"p1": 0.0
 	},
 
-	/**
-	 * Output data specification
-	 */
 	"output": {
 		"burst_size": 1
-	},
-
-	/**
-	 * Experiments to be conducted
-	 */
-	"experiments": [
-		{
-			"name": "Spike time noise $\\sigma t$ sweep",
-			"sweeps": {
-				"input.sigma_t": {"min": 0.0, "max": 20.0, "count": 50}
-			},
-			"repeat": 8
-		},
-		{
-			"name": "Spike weight noise $\\sigma t$ sweep",
-			"sweeps": {
-				"topology.sigma_w": {"min": 0.0, "max": 0.01, "count": 50}
-			},
-			"repeat": 8
-		},
-		{
-			"name": "Time window $T$ sweep",
-			"sweeps": {
-				"input.time_window": {"min": 1.0, "max": 20.0, "count": 50}
-			},
-			"repeat": 8
-		}
-	]
+	}
 }
 
